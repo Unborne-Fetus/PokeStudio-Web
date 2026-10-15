@@ -13,8 +13,19 @@ function art(api,path,className,title){const outer=dom("div",className+" art-fra
 function monIcon(api,species,shiny=false,dex=new Map()){
  const id=spriteId(species,dex),urls=briskSpriteUrls(id,shiny);
  const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
- outer.append(art(api,"graphics/pokemon/"+monAsset(species)+"/icon.png","icon-fallback",species));
- if(urls){const img=dom("img","brisk-animated-sprite");img.alt=(shiny?"Shiny ":"")+species;img.loading="lazy";img.src=urls.animated;img.onerror=()=>{if(img.src===urls.animated)img.src=urls.still;else img.remove()};outer.append(img)}
+ const fallback=dom("span","art-placeholder",species.slice(0,2).toUpperCase());outer.append(fallback);
+ if(id){
+  const icon=dom("img","pixel-art brisk-corrected-icon");
+  icon.alt=species+" icon";icon.loading="lazy";
+  icon.src="https://raw.githubusercontent.com/Unborne-Fetus/Brisk-Dex/main/brisk-dex-icons/"+id+(shiny?"_shiny":"")+".png";
+  icon.onerror=()=>icon.remove();outer.append(icon);
+ }
+ if(urls){
+  const img=dom("img","brisk-animated-sprite");img.alt=(shiny?"Shiny ":"")+species;
+  img.loading="lazy";img.src=urls.animated;
+  img.onerror=()=>{if(img.src===urls.animated)img.src=urls.still;else img.remove()};
+  outer.append(img)
+ }
  return outer
 }
 function portrait(api,pic){return art(api,"graphics/trainers/front_pics/"+picAsset(pic)+".png","trainer-portrait",pic)}
