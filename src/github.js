@@ -36,6 +36,19 @@ export class GitHubWorkspace{
   const blob=await this.request("/repos/"+this.repo+"/git/blobs/"+entry.sha);
   const bytes=b64ToBytes(blob.content||"");return knownBinary?{bytes,sha:entry.sha,isBinary:true}:{value:new TextDecoder().decode(bytes),sha:entry.sha,isBinary:false};
  }
+ async dispatchBuild(){
+  if(!this.repo||!this.branch)throw Error("Connect to a repository first.");
+  if(!this.token)throw Error("A GitHub token with Actions: write permission is needed to trigger a build.");
+  const base="/repos/"+this.repo;
+  const response=await this.request(base+"/actions/workflows?per_page=100");
+  const workflows=response.workflows||[];
+  const workflow=workflows.find(w=>/build.*brisk.*emerald/i.test(w.name))
+   ||workflows.find(w=>/build.*emerald|rom build/i.test(w.name))
+   ||workflows.find(w=>/build/i.test(w.name)&&!(/deploy|pages/i.test(w.name)));
+  if(!workflow)throw Error("This repository has no recognizable ROM build workflow.");
+  await this.request(base+"/actions/workflows/"+workflow.id+"/dispatches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ref:this.branch})});
+  return workflow;
+ }
  async commit(changed,message){
   if(!this.token)throw Error("Set a fine-grained GitHub token in Workspace settings to commit.");
   if(!changed.length)throw Error("No files have changed.");
