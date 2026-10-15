@@ -1,5 +1,4 @@
 import {speciesCatalog,selectedSpecies,speciesIdentifier} from "./species-forms.js";
-import {createBriskIcon} from "./brisk-icon.js";
 import {createSpreadEditor} from "./spread-editor.js";
 import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
@@ -17,8 +16,14 @@ function monIcon(api,species,shiny=false,dex=new Map(),speciesForms=null){
  const exact=form?speciesForms.defined.get(form.form)?.id:null;
  const id=exact||spriteId(species,dex);
  const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
- outer.append(createBriskIcon(id,shiny,species));
- return outer
+ const urls=briskSpriteUrls(id,shiny);
+ const placeholder=dom("span","art-placeholder",String(species).slice(0,2).toUpperCase());outer.append(placeholder);
+ if(!urls)return outer;
+ const img=dom("img","brisk-front-sprite");img.alt=(shiny?"Shiny ":"")+species+" animated front battle sprite";
+ img.loading="lazy";img.decoding="async";img.src=urls.animated;
+ img.onerror=()=>{if(img.dataset.fallback)return img.remove();img.dataset.fallback="1";img.src=urls.still};
+ img.onload=()=>{placeholder.hidden=true};
+ outer.append(img);return outer
 }
 function portrait(api,pic){return art(api,"graphics/trainers/front_pics/"+picAsset(pic)+".png","trainer-portrait",pic)}
 const categories=["Name","Class","Pic","Gender","Music","AI","Items","Double Battle","Battle Type","Mugshot"];
