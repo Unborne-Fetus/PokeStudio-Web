@@ -124,3 +124,10 @@ input::placeholder{color:#a991a1}
 .event-item:hover{background:#543449}
 @media(max-width:1060px){.map-stage{grid-template-columns:minmax(0,1fr)}.map-canvas-shell{max-height:50vh}.trainer-workspace{grid-template-columns:200px minmax(0,1fr)}}
 @media(max-width:760px){.trainer-workspace{grid-template-columns:1fr}.trainer-browser{position:static;max-height:280px}.trainer-list{max-height:140px}.trainer-heading .trainer-hero{flex-wrap:wrap}.trainer-portrait{width:86px;height:90px}.pokemon-lead{flex-direction:column;align-items:flex-start}.pokemon-lead-fields{width:100%}.map-mode{font-size:12px;padding:9px}.map-mode small{font-size:10px}.map-stage{grid-template-columns:1fr}.map-canvas-shell{max-height:48vh}.metatile-gallery{grid-template-columns:repeat(6,1fr)}.topbar #undo-btn,.topbar #redo-btn{font-size:11px;padding:5px 7px}.map-picker{max-width:160px}}
+
+/* Trainer Studio: explicit project-aware selection menus */
+.trainer-setting-select{width:100%;max-width:100%;background:#332439;color:#f6e5e8;border:1px solid #84596a;min-height:38px;cursor:pointer}
+.trainer-setting-select:hover{border-color:#edaa78}
+.trainer-setting-select:focus-visible{outline:2px solid #edaa78;outline-offset:1px}
+.trainer-pic-select-preview{display:flex;align-items:center;gap:10px;padding:8px;background:#2c1d2e;border:1px solid #624454;border-radius:8px;min-height:82px}
+.trainer-pic-select-preview .trainer-portrait{width:78px;height:70px}
