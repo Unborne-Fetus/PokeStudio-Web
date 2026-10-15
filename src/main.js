@@ -3,7 +3,7 @@ import {renderVisual} from "./editors.js";
 import {createZip} from "./zip.js";
 import {EditHistory} from "./history.js";
 import {mapStudio} from "./maps.js";
-import {trainerPage} from "./trainers.js";
+import {trainerPage} from "./trainers.js?rev=icon-frames-2";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
