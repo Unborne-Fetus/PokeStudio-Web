@@ -191,3 +191,22 @@ test("Brisk Dex national ID mapping and shiny animation paths",()=>{
  assert.ok(urls.animated.endsWith("/3_front_shiny_anim.gif"));
  assert.ok(briskSpriteUrls(1,false).animated.endsWith("/1_front_anim.gif"))
 });
+
+import {speciesCatalog,selectedSpecies,speciesIdentifier} from "../src/species-forms.js";
+test("species and forms allow only connected expansion definitions",()=>{
+ const species="enum Species { SPECIES_NONE = 0, SPECIES_PIDGEY = 16, SPECIES_PIKACHU = 25, SPECIES_PIKACHU_COSPLAY = 1009, SPECIES_PIKACHU_ROCK_STAR = 1010, SPECIES_PIDGEOT_MEGA = 915, SPECIES_PERSIAN = 53, SPECIES_PERSIAN_ALOLA = 966, };";
+ const dex="enum NationalDexOrder { NATIONAL_DEX_NONE, NATIONAL_DEX_PIDGEY, NATIONAL_DEX_PIKACHU, NATIONAL_DEX_PERSIAN, };";
+ const catalog=speciesCatalog(species,dex);
+ assert.equal(catalog.groups.get("PIKACHU").length,3);
+ assert.deepEqual(selectedSpecies("Pikachu Rock Star",catalog),{base:"PIKACHU",form:"PIKACHU_ROCK_STAR"});
+ assert.deepEqual(selectedSpecies("SPECIES_PERSIAN_ALOLA",catalog),{base:"PERSIAN",form:"PERSIAN_ALOLA"});
+ assert.equal(speciesIdentifier("PIKACHU","PIKACHU_COSPLAY",catalog),"SPECIES_PIKACHU_COSPLAY");
+ assert.throws(()=>speciesIdentifier("PERSIAN","PERSIAN_GALAR",catalog));
+ assert.throws(()=>speciesIdentifier("PIKACHU","PIKACHU_MEGA",catalog))
+});
+test("setting Dynamax level to zero removes the source line without changing moves",()=>{
+ const example="Pikachu\nLevel: 60\nDynamax Level: 9\n- Thunderbolt";
+ const changed=changeField(example,"Dynamax Level","");
+ assert.equal(changed,"Pikachu\nLevel: 60\n- Thunderbolt");
+ assert.equal(changeField(changed,"Dynamax Level","10"),example.replace("9","10"))
+});
