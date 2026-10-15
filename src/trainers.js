@@ -1,3 +1,4 @@
+import {DROPDOWN_FIELDS,trainerDropdownOptions,optionsWithCurrent} from "./trainer-options.js";
 import {catalog,mon,fields,changeMeta,changeField,editMon,addMon,removeMon,shiftMon,renameMon,setMoves,replaceTrainer,monAsset,picAsset} from "./trainer-data.js";
 const dom=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
 const button=(text,callback,cls="btn")=>{const e=dom("button",cls,text);e.type="button";e.onclick=callback;return e};
@@ -20,6 +21,7 @@ export async function trainerPage(api,root){
  if(!root.isConnected)return;
  status.remove();
  const trainers=catalog(file.value);
+ const dropdowns=trainerDropdownOptions(trainers,api.paths());
  if(!trainers.length){root.append(dom("div","warn","No trainer definitions were recognized in this project."));return}
  const layout=dom("div","trainer-workspace"),browser=dom("section","panel trainer-browser"),details=dom("section","trainer-detail");
  root.append(layout);layout.append(browser,details);
@@ -64,7 +66,27 @@ export async function trainerPage(api,root){
   label.append(dom("p","muted",(selected.meta.Class||"Pokémon Trainer")+" · "+selected.pokemon.length+"/6 Pokémon"));
   hero.append(label);head.append(hero);
   const headBar=dom("div","trainer-header-fields");
-  for(const key of categories)headBar.append(prop(key,selected.meta[key]??"",value=>editHeader(key,value)));
+  for(const key of categories){
+   const value=selected.meta[key]??"";
+   if(!DROPDOWN_FIELDS.includes(key)){headBar.append(prop(key,value,next=>editHeader(key,next)));continue}
+   const label=dom("label","form-field");label.append(dom("span","",key));
+   const select=dom("select","trainer-setting-select");select.setAttribute("aria-label",key);
+   const entries=optionsWithCurrent(dropdowns[key]||[],value);
+   for(const entry of entries){
+    const option=dom("option","",entry.label);
+    option.value=entry.value;
+    select.append(option)
+   }
+   select.value=value;
+   select.onchange=()=>editHeader(key,select.value);
+   label.append(select);
+   if(key==="Pic"){
+    const preview=dom("div","trainer-pic-select-preview");
+    preview.append(portrait(api,value||"Hiker"));
+    label.append(preview)
+   }
+   headBar.append(label)
+  }
   head.append(dom("h3","","Trainer settings"),headBar);
   details.append(head);
   const team=dom("section","panel");details.append(team);
