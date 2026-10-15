@@ -36,7 +36,7 @@ export function autocomplete(labelText,value,options,onCommit,{placeholder="",al
  input.addEventListener("keydown",e=>{
   if(e.key==="ArrowDown"){e.preventDefault();if(menu.hidden)paint();else{highlight=Math.min(visible.length-1,highlight+1);paint()} }
   else if(e.key==="ArrowUp"){e.preventDefault();highlight=Math.max(0,highlight-1);paint()}
-  else if(e.key==="Enter"){e.preventDefault();if(!menu.hidden&&visible.length&&input.value.trim()&&(highlight>=0)&&!allowCustom)commit(visible[highlight].value);else commit(input.value)}
+  else if(e.key==="Enter"){e.preventDefault();if(!menu.hidden&&visible.length&&input.value.trim()&&highlight>=0)commit(visible[highlight].value);else commit(input.value)}
   else if(e.key==="Tab"){commit(input.value)}
   else if(e.key==="Escape"){input.value=String(value??"");close()}
  });
