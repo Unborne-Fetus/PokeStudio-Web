@@ -159,3 +159,35 @@ test("AI dropdown comes from battle_ai.h rather than used trainer.party values",
  assert.equal(dropdowns.AI.some(o=>o.value==="Random Custom Trainer"),false);
  assert.equal(optionsWithCurrent(dropdowns.AI,"Random Custom Trainer")[0].value,"Random Custom Trainer")
 });
+
+import {definitions,normalizeChoice} from "../src/game-legal.js";
+import {nationalDexIndex,spriteId,briskSpriteUrls} from "../src/brisk-art.js";
+import {readSpread,applySpread,spreadIsValid,spreadTotal} from "../src/stat-spreads.js";
+test("move ability choices use game-defined IDs not trainer.party strings",()=>{
+ const moves=definitions("MOVE_NONE = 0,\nMOVE_FIRE_PUNCH = 7,\nMOVE_FIREPUNCH = MOVE_FIRE_PUNCH,\nMOVE_SURF = 33,","MOVE");
+ const abilities=definitions("ABILITY_NONE = 0,\nABILITY_WONDER_GUARD = 25,\nABILITY_LEVITATE = 30,","ABILITY");
+ assert.deepEqual(moves.map(x=>x.value),["MOVE_FIRE_PUNCH","MOVE_SURF"]);
+ assert.equal(normalizeChoice("Fire Punch",moves).value,"MOVE_FIRE_PUNCH");
+ assert.equal(normalizeChoice("MOVE_SURF",moves).value,"MOVE_SURF");
+ assert.equal(normalizeChoice("Not A Real Move",moves),null);
+ assert.equal(normalizeChoice("Wonder Guard",abilities).value,"ABILITY_WONDER_GUARD");
+});
+test("IV and EV controls clamp and enforce the total EV pool",()=>{
+ let ev=readSpread("252 HP / 252 Atk","EVs");
+ ev=applySpread(ev,"Spe",252,"EVs");
+ assert.equal(ev.Spe,6);assert.equal(spreadTotal(ev),510);
+ assert.equal(applySpread(ev,"HP",999,"EVs").HP,252);
+ assert.equal(spreadIsValid(ev,"EVs"),true);
+ assert.equal(spreadIsValid({...ev,Spe:7},"EVs"),false);
+ let iv=readSpread("0 HP / 12 Spe","IVs");
+ iv=applySpread(iv,"HP",99,"IVs");
+ assert.equal(iv.HP,31);assert.equal(iv.Spe,12);
+ assert.equal(spreadIsValid(iv,"IVs"),true)
+});
+test("Brisk Dex national ID mapping and shiny animation paths",()=>{
+ const data="enum NationalDexOrder { NATIONAL_DEX_NONE, NATIONAL_DEX_BULBASAUR, NATIONAL_DEX_IVYSAUR, NATIONAL_DEX_PIKACHU, };";
+ const dex=nationalDexIndex(data);assert.equal(spriteId("Bulbasaur",dex),1);
+ const urls=briskSpriteUrls(spriteId("Pikachu",dex),true);
+ assert.ok(urls.animated.endsWith("/3_front_shiny_anim.gif"));
+ assert.ok(briskSpriteUrls(1,false).animated.endsWith("/1_front_anim.gif"))
+});
