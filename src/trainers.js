@@ -1,4 +1,5 @@
 import {speciesCatalog,selectedSpecies,speciesIdentifier} from "./species-forms.js";
+import {createBriskIcon} from "./brisk-icon.js";
 import {createSpreadEditor} from "./spread-editor.js";
 import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
@@ -11,20 +12,12 @@ const dom=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.classNam
 const button=(text,callback,cls="btn")=>{const e=dom("button",cls,text);e.type="button";e.onclick=callback;return e};
 const prop=(title,value,fn,type="text")=>{const label=dom("label","form-field");label.append(dom("span","",title));const input=dom("input");input.type=type;input.value=String(value??"");input.onchange=()=>fn(type==="number"?Number(input.value):input.value);label.append(input);return label};
 function art(api,path,className,title){const outer=dom("div",className+" art-frame");const letter=dom("span","art-placeholder",(title||"?").slice(0,2).toUpperCase());outer.append(letter);if(api.hasPath(path)){const img=dom("img","pixel-art");img.alt=title;img.loading="lazy";img.src=api.assetUrl(path);img.onerror=()=>img.remove();outer.append(img)}return outer}
-function monIcon(api,species,shiny=false,dex=new Map()){
- const id=spriteId(species,dex);
+function monIcon(api,species,shiny=false,dex=new Map(),speciesForms=null){
+ const form=speciesForms?selectedSpecies(species,speciesForms):null;
+ const exact=form?speciesForms.defined.get(form.form)?.id:null;
+ const id=exact||spriteId(species,dex);
  const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
- const placeholder=dom("span","art-placeholder",String(species).slice(0,2).toUpperCase());outer.append(placeholder);
- if(id){
-  // Brisk Dex corrected icon assets are single-frame PNGs. The older ROM icon PNGs
-  // are vertically stacked sprite sheets and must not be used as ordinary images.
-  const image=dom("img","brisk-corrected-icon");
-  image.alt=(shiny?"Shiny ":"")+species+" icon";
-  image.loading="lazy";
-  image.src="https://raw.githubusercontent.com/Unborne-Fetus/Brisk-Dex/main/brisk-dex-icons/"+id+(shiny?"_shiny":"")+".png";
-  image.onerror=()=>image.remove();
-  outer.append(image)
- }
+ outer.append(createBriskIcon(id,shiny,species));
  return outer
 }
 function portrait(api,pic){return art(api,"graphics/trainers/front_pics/"+picAsset(pic)+".png","trainer-portrait",pic)}
@@ -119,7 +112,7 @@ export async function trainerPage(api,root){
   const cards=dom("div","team-grid");team.append(cards);
   selected.pokemon.forEach((pokemon,i)=>{
    const card=button("",()=>{chosenMon=i;renderDetails()},"team-card"+(i===chosenMon?" active":""));
-   const top=dom("div","team-card-top");top.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex));
+   const top=dom("div","team-card-top");top.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex,speciesForms));
    const info=dom("div");info.append(dom("strong","",pokemon.species.replace(/^SPECIES_/,"").replaceAll("_"," ")));
    info.append(dom("small","","Lv. "+(pokemon.fields.Level||"100")+(pokemon.fields.Shiny==="Yes"?" · ✨ Shiny":"")));
    top.append(info);card.append(top);
@@ -137,7 +130,7 @@ export async function trainerPage(api,root){
   editBar.append(button("Remove",()=>{
    if(confirm("Remove "+pokemon.species+" from "+selected.id+"?")&&apply(raw=>removeMon(raw,chosenMon)))renderDetails()
   },"btn"));editPanel.append(editBar);
-  const lead=dom("div","pokemon-lead");lead.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex));
+  const lead=dom("div","pokemon-lead");lead.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex,speciesForms));
   const leadInputs=dom("div","pokemon-lead-fields");
   const choice=selectedSpecies(pokemon.species,speciesForms);
   if(choice){
