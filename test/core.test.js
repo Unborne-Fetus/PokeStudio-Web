@@ -22,7 +22,7 @@ test("multi-file ZIP produces headers for source and binary entries",async()=>{
  assert.equal(view.getUint32(0,true),0x04034b50);
  assert.equal(view.getUint32(bytes.length-22,true),0x06054b50);
  assert.equal(view.getUint16(bytes.length-12,true),2);
- assert.equal(view.getUint16(bytes.length-10,true),2);
+ assert.equal(view.getUint16(bytes.length-14,true),2);
 });
 
 test("commits must abort when the remote branch moved",async()=>{
