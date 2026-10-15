@@ -67,11 +67,12 @@ export async function pokemonPage(api,root){
   }));
  }
  if(!root.isConnected)return;
- const [abilitiesHeader,movesHeader,pokemonHeader,itemsHeader]=await Promise.all([
+ const [abilitiesHeader,movesHeader,pokemonHeader,itemsHeader,configHeader]=await Promise.all([
   optional(api,"include/constants/abilities.h"),
   optional(api,"include/constants/moves.h"),
   optional(api,"include/constants/pokemon.h"),
-  optional(api,"include/constants/items.h")
+  optional(api,"include/constants/items.h"),
+  optional(api,"include/config/pokemon.h")
  ]);
  if(!root.isConnected)return;
  progress.remove();
@@ -86,6 +87,9 @@ export async function pokemonPage(api,root){
  const count=e("p","muted"),list=e("div","trainer-list"),more=button("Show more",()=>{limit+=100;renderList()});browser.append(count,list,more);
  let selected=byId.has("SPECIES_BULBASAUR")?"SPECIES_BULBASAUR":speciesChoices[0]?.value,limit=100,serial=0;
  const movePaths=[...paths].filter(x=>x.startsWith("src/data/pokemon/level_up_learnsets/")&&x.endsWith(".h"));
+ const cfg=/^\s*#define\s+P_LVL_UP_LEARNSETS\s+(GEN_\d+|GEN_LATEST)\b/m.exec(configHeader)?.[1];
+ const activeLevelGen=cfg==="GEN_LATEST"?Math.max(0,...movePaths.map(x=>Number(/gen_(\d+)\.h$/.exec(x)?.[1])||0)):Number(cfg?.replace("GEN_",""))||9;
+ let selectedLevelGen=String(activeLevelGen);
  const eggPath=paths.has("src/data/pokemon/egg_moves.h")?"src/data/pokemon/egg_moves.h":null;
  const teachPaths=[...paths].filter(x=>/\/(?:teachable_learnsets|tmhm_learnsets|tutor_learnsets)(?:\/|\.h|\.c)/.test(x));
  function renderList(){
@@ -116,7 +120,7 @@ export async function pokemonPage(api,root){
   header.append(e("h2","",textMacro(fields.get("speciesName")?.value)||pretty(selected)),e("p","muted",selected+" · "+where.path));
   const open=button("Open species code",()=>api.open(where.path));header.append(open);detail.append(header);
   function write(key,value){
-   try{api.changeFor(where.path,editSpeciesField(record.value,selected,key,value));record.value=api.loadRaw?record.value:record.value;
+   try{api.changeFor(where.path,editSpeciesField(record.value,selected,key,value));
     api.notify(pretty(selected)+": updated "+key+" (not yet committed).","success");
     renderDetails();
    }catch(err){api.notify(err.message,"error")}
@@ -189,7 +193,7 @@ export async function pokemonPage(api,root){
    const rows=parser(found.body),table=e("div","pokemon-move-list");box.append(table);
    function commit(values){
     try{
-     const record=api.changeFor(located,editor(source,pointer,values));
+     api.changeFor(located,editor(source,pointer,values));
      api.notify("Staged "+kind.toLowerCase()+" changes in "+located,"success");renderDetails();
     }catch(err){api.notify(err.message,"error")}
    }
@@ -197,7 +201,7 @@ export async function pokemonPage(api,root){
     table.replaceChildren();
     rows.forEach((row,i)=>{
      const line=e("div","pokemon-move-row");
-     if(kind==="Level-up moves")line.append(scalar("Level",row.level,v=>{rows[i]={...row,level:Number(v)};commit(rows)},1,100));
+     if(kind==="Level-up moves")line.append(scalar("Level (0 = on evolution)",row.level,v=>{rows[i]={...row,level:Number(v)};commit(rows)},0,100));
      line.append(choice("Move",kind==="Level-up moves"?row.move:row,validMoves,v=>{rows[i]=kind==="Level-up moves"?{...row,move:v}:v;commit(rows)}));
      line.append(button("Remove",()=>{rows.splice(i,1);commit(rows)}));table.append(line)
     })
@@ -206,8 +210,15 @@ export async function pokemonPage(api,root){
    box.append(button("+ Add move",()=>{rows.push(kind==="Level-up moves"?{level:1,move:validMoves[0]?.value||"MOVE_POUND"}:validMoves[0]?.value||"MOVE_POUND");commit(rows)}));
   }
   // Prefer generation-matching level-up file, then fall back to other versions.
-  const gen=/gen_(\d+)_families\.h$/.exec(where.path)?.[1];
-  const sortedMoves=[...movePaths].sort((a,b)=>Number(!a.endsWith("/gen_"+gen+".h"))-Number(!b.endsWith("/gen_"+gen+".h")));
+  const genRow=e("div","pokemon-learnset-generation");
+  const genLabel=e("label","form-field");genLabel.append(e("span","","Level-up learnset version"));
+  const genSelect=e("select");
+  for(const path of movePaths){const match=/gen_(\d+)\.h$/.exec(path);if(!match)continue;const option=e("option","",("Generation "+match[1])+(Number(match[1])===activeLevelGen?" (configured default)":""));option.value=match[1];genSelect.append(option)}
+  genSelect.value=selectedLevelGen;
+  genSelect.onchange=()=>{selectedLevelGen=genSelect.value;renderDetails()};
+  genLabel.append(genSelect);genRow.append(genLabel,e("p","muted","The project's configured default is Generation "+activeLevelGen+". Switching versions edits a different historical learnset file."));
+  movesPanel.append(genRow);
+  const sortedMoves=[...movePaths].sort((a,b)=>Number(!a.endsWith("/gen_"+selectedLevelGen+".h"))-Number(!b.endsWith("/gen_"+selectedLevelGen+".h")));
   await renderMoves("Level-up moves",readPointer(fields,"levelUpLearnset"),sortedMoves,levelMoves,editLevelMoves);
   if(ticket!==serial)return;
   if(eggPath)await renderMoves("Egg moves",readPointer(fields,"eggMoveLearnset"),[eggPath],eggMoves,editEggMoves);
