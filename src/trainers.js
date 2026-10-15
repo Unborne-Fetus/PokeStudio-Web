@@ -24,13 +24,13 @@ export async function trainerPage(api,root){
  status.remove();
  const trainers=catalog(file.value);
  const headers={};
- await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"]].map(async ([key,fileName])=>{
+ await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"],["ai","include/constants/battle_ai.h"]].map(async ([key,fileName])=>{
   try{headers[key]=(await api.loadRaw(fileName)).value||""}catch{headers[key]=""}
  }));
  if(!root.isConnected)return;
  const pokemonOptions=pokemonChoiceLists(trainers,headers);
  const editable=trainers.filter(t=>!isPlaceholderTrainer(t));
- const dropdowns=trainerDropdownOptions(trainers,api.paths());
+ const dropdowns=trainerDropdownOptions(trainers,api.paths(),headers.ai);
  if(!trainers.length){root.append(dom("div","warn","No trainer definitions were recognized in this project."));return}
  const layout=dom("div","trainer-workspace"),browser=dom("section","panel trainer-browser"),details=dom("section","trainer-detail");
  root.append(layout);layout.append(browser,details);
