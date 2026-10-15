@@ -91,14 +91,14 @@ test("global history groups keystrokes and handles visual binary changes",()=>{
  assert.equal(h.canRedo,true)
 });
 
-import {trainerDropdownOptions,optionsWithCurrent} from "../src/trainer-options.js";
+import {trainerDropdownOptions,optionsWithCurrent,aiOptionsFromHeader} from "../src/trainer-options.js";
 test("trainer dropdowns populate project-defined labels with distinct values",()=>{
  const trainers=[
   {meta:{Pic:"Leader Roxanne",Class:"Leader",Music:"Female",AI:"Check Viability",Gender:"Female","Double Battle":"No"}},
   {meta:{Pic:"Aqua Grunt M",Class:"Team Aqua",Music:"Aqua",AI:"Basic Trainer",Gender:"Male","Double Battle":"Yes"}},
   {meta:{Pic:"Leader Roxanne",Class:"Leader",Music:"Female",AI:"Check Viability"}}
  ];
- const list=trainerDropdownOptions(trainers,["graphics/trainers/front_pics/leader_roxanne.png"]);
+ const list=trainerDropdownOptions(trainers,["graphics/trainers/front_pics/leader_roxanne.png"], "#define AI_FLAG_BASIC_TRAINER (AI_FLAG_CHECK_BAD_MOVE)\n#define AI_FLAG_CHECK_VIABILITY AI_FLAG(2)");
  assert.deepEqual(list.Class.map(o=>o.value),["Leader","Team Aqua"]);
  assert.deepEqual(list.Music.map(o=>o.value),["Aqua","Female"]);
  assert.deepEqual(list.AI.map(o=>o.value),["Basic Trainer","Check Viability"]);
@@ -107,7 +107,7 @@ test("trainer dropdowns populate project-defined labels with distinct values",()
  assert.deepEqual(list["Double Battle"].map(o=>o.value),["No","Yes"])
 });
 test("nonstandard trainer dropdown values are preserved rather than overwritten",()=>{
- const dropdowns=trainerDropdownOptions([{meta:{AI:"Basic Trainer"}}]);
+ const dropdowns=trainerDropdownOptions([{meta:{AI:"Basic Trainer"}}],[], "#define AI_FLAG_BASIC_TRAINER (AI_FLAG_CHECK_BAD_MOVE)");
  assert.equal(optionsWithCurrent(dropdowns.AI,"Omniscient").at(0).value,"Omniscient");
  assert.equal(optionsWithCurrent(dropdowns.AI,"Basic Trainer").length,1);
  assert.equal(optionsWithCurrent(dropdowns.Gender,"").at(0).value,"")
@@ -150,4 +150,12 @@ test("nature, held item, ball, Tera suggestion menus filter partial matches",()=
  assert.equal(searchSuggestions(choices["Held item"],"left")[0].value,"Leftovers");
  assert.equal(searchSuggestions(choices.Ball,"div")[0].value,"Dive");
  assert.equal(searchSuggestions(choices["Tera Type"],"ste")[0].value,"Steel");
+});
+
+test("AI dropdown comes from battle_ai.h rather than used trainer.party values",()=>{
+ const raw="#define AI_FLAG_OMNISCIENT AI_FLAG(16)\n#define AI_FLAG_SMART_SWITCHING AI_FLAG(14)\n#define AI_FLAG_BASIC_TRAINER (AI_FLAG_CHECK_BAD_MOVE)\n#define AI_SCORE_DEFAULT 100";
+ const dropdowns=trainerDropdownOptions([{meta:{AI:"Random Custom Trainer"}}],[],raw);
+ assert.deepEqual(dropdowns.AI.map(o=>o.value),["Omniscient","Smart Switching","Basic Trainer"]);
+ assert.equal(dropdowns.AI.some(o=>o.value==="Random Custom Trainer"),false);
+ assert.equal(optionsWithCurrent(dropdowns.AI,"Random Custom Trainer")[0].value,"Random Custom Trainer")
 });
