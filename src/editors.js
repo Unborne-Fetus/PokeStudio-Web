@@ -147,7 +147,7 @@ export function renderInspector(api,root,rec){
  const data=parse(rec);if(!data){root.append(el("div","hint-card","Choose a valid JSON file for the structured inspector, or a trainers.party file for the trainer block editor."));return}
  toolbar(root,"Structured JSON inspector","Edit primitive values while retaining all unrecognized keys and structures.");
  const filter=el("input");filter.placeholder="Filter keys…";filter.style.width="min(450px,100%)";root.append(filter);
- const content=el("div","panel");content.style.marginTop="12px";root.append(content);
+ let content=el("div","panel");content.style.marginTop="12px";root.append(content);
  function display(){content.replaceChildren();let count=0;function walk(node,path,depth){
    if(count>300){return}for(const [key,value] of Object.entries(node)){
      if(count++>300){content.append(help("Showing first 300 properties. Filter to narrow results."));return}
