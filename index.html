@@ -1,1 +1,68 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PokéStudio Web</title><link rel="stylesheet" href="style.css"></head><body><header><strong>◈ PokéStudio Web</strong><span>pokeemerald-expansion workspace</span><button id="open">Open folder</button><button id="github">Load GitHub file</button><button id="save">Download edited file</button></header><main><aside><h3>Workspace</h3><input id="search" placeholder="Filter files"/><div id="files">Open a local project folder or a GitHub file to begin.</div><p class="hint">Local folders use browser file access. GitHub file loading is read-only until exported.</p></aside><section><nav><button data-view="code" class="active">Code</button><button data-view="map">Map JSON</button><button data-view="encounters">Encounters JSON</button><button data-view="diff">Changes</button></nav><div id="notice">Select a file to begin editing.</div><div id="codepane"><div id="filename">No file selected</div><textarea id="editor" spellcheck="false" aria-label="Source editor"></textarea></div><div id="visual" hidden></div><pre id="diff" hidden></pre></section></main><input id="folder" type="file" webkitdirectory multiple hidden><dialog id="remote"><form method="dialog"><h3>Load public GitHub file</h3><label>Repository <input id="repo" value="Unborne-Fetus/Pokemon-Brisk-Emerald"></label><label>Branch <input id="branch" value="master"></label><label>File path <input id="path" placeholder="data/maps/.../map.json"></label><p>Uses the public GitHub raw endpoint. Private repositories require a future OAuth integration.</p><button value="cancel">Cancel</button><button id="load" value="load">Load</button></form></dialog><script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — graphical and source-code editor for pokeemerald-expansion.">
+<title>PokéStudio Web · ROM hacking IDE</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.css">
+<link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./" aria-label="PokéStudio home"><span class="brand-icon">◆</span><strong>PokéStudio</strong><small>WEB</small></a>
+  <span class="top-divider"></span>
+  <div class="repo-controls"><label class="sr" for="repo">Repository</label><input id="repo" value="Unborne-Fetus/Pokemon-Brisk-Emerald" spellcheck="false" aria-label="Owner/repository"><input id="branch" value="" placeholder="default branch" aria-label="Branch"><button id="connect" class="btn primary">Connect</button></div>
+  <div class="grow"></div><span id="dirty-counter" class="status-pill">0 changes</span>
+  <button id="review-btn" class="btn">Review changes</button><button id="commit-btn" class="btn primary">Commit to GitHub</button>
+  <button id="more-menu" class="btn icon-btn" aria-label="Project options" title="Project options">☰</button>
+</header>
+<div id="workspace">
+  <aside id="sidebar">
+    <div class="side-title"><span>EXPLORER</span><button id="refresh" class="subtle" title="Refresh tree">↻</button></div>
+    <div class="filter-wrap"><input id="search" placeholder="Filter files / folders" autocomplete="off"><span>⌕</span></div>
+    <div id="breadcrumb" class="breadcrumb"></div>
+    <div class="side-scroll" id="files"><div class="empty-side">Connect to a GitHub repository or open a local folder.</div></div>
+    <div class="sidebar-foot"><button id="open-local" class="btn">Open local folder</button><button id="export-all" class="btn">Export edits</button></div>
+  </aside>
+  <section id="workarea">
+    <nav id="tabs" aria-label="Editor modes">
+      <button data-view="code" class="active">⌨ Code</button>
+      <button data-view="map">▦ Map & events</button>
+      <button data-view="encounters">◈ Encounters</button>
+      <button data-view="data">⚙ JSON inspector</button>
+      <button data-view="changes">⇄ Changes</button>
+    </nav>
+    <div id="contextbar"><span id="filename">No file selected</span><div class="grow"></div>
+      <button id="file-search" class="subtle" title="Find in active source">Find</button><button id="save-file" class="subtle" title="Download current file">↓ Download</button>
+      <button id="toggle-sidebar" class="subtle narrow-only" aria-label="Toggle files">☰ Files</button></div>
+    <div id="notice" role="status" aria-live="polite">Connect to a repository to start exploring source files.</div>
+    <div id="codepane" class="editor-pane"><div id="search-line" hidden><input id="find-text" placeholder="Find text"><input id="replace-text" placeholder="Replace with"><button id="find-next" class="btn">Next</button><button id="replace-one" class="btn">Replace</button><button id="replace-all" class="btn">All</button><button id="close-search" class="btn">×</button></div><textarea id="editor" spellcheck="false" aria-label="Code editor"></textarea><div id="code-status">No file open</div></div>
+    <div id="visual" class="editor-pane" hidden></div>
+    <div id="changes" class="editor-pane" hidden></div>
+  </section>
+  <aside id="inspector"><div class="side-title">WORKSPACE</div>
+    <div class="inspector-section"><small>Project</small><strong id="repo-info">Not connected</strong><span id="branch-info" class="muted">Select a repository</span></div>
+    <div class="inspector-section"><small>Open file</small><strong id="current-info">None</strong><span class="muted" id="file-info">—</span></div>
+    <div class="inspector-section"><small>Quick open</small><button class="quick" data-quick="data/maps/">🗺 Maps</button><button class="quick" data-quick="src/data/wild_encounters.json">🌿 Wild encounters</button><button class="quick" data-quick="src/data/trainers.party">⚔ Trainers</button><button class="quick" data-quick="src/data/">📋 Species & items</button><button class="quick" data-quick="include/config/">⚙ Config</button></div>
+    <div class="inspector-section"><small>Tips</small><p class="muted">Open a map.json for visual event editing. Open map.bin from a map layout for a metatile grid. Open wild_encounters.json for a searchable encounter table.</p></div>
+  </aside>
+</div>
+<footer id="footer"><span id="connection-status"><span class="dot"></span>Not connected</span><span id="hint">Ctrl/Cmd + S to download file · Ctrl/Cmd + P to quick open</span><span id="position">Ln 1, Col 1</span></footer>
+<dialog id="options-dialog"><div class="dialog-head"><h2>Workspace settings</h2><button class="close-dialog subtle">✕</button></div>
+  <label>GitHub token <input id="token" type="password" autocomplete="off" placeholder="Token for write access"></label>
+  <p class="muted">Optional. A fine-grained token with Contents: Read and write permission enables commits. It stays in browser memory for this page only and is never saved to local storage.</p>
+  <div class="dialog-actions"><button id="clear-token" class="btn">Clear token</button><button class="close-dialog btn primary">Done</button></div>
+  <hr><label>Editor font size <input id="font-size" type="range" min="11" max="22" value="14"></label>
+  <p class="muted">This editor does not need Ubuntu, VS Code, or a local build environment. GitHub Actions can compile ROMs separately.</p>
+</dialog>
+<dialog id="commit-dialog"><div class="dialog-head"><h2>Commit your changes</h2><button class="close-dialog subtle">✕</button></div>
+  <p class="muted">Commits all listed modified files to the selected branch. If it changed remotely, the commit is blocked until you reconnect and review.</p><div id="commit-files"></div>
+  <label>Commit message <input id="commit-message" value="Edit project files in PokéStudio Web" maxlength="200"></label>
+  <div class="dialog-actions"><button class="close-dialog btn">Cancel</button><button id="confirm-commit" class="btn primary">Commit changes</button></div>
+</dialog>
+<dialog id="quick-dialog"><div class="dialog-head"><h2>Quick open</h2><button class="close-dialog subtle">✕</button></div><input id="quick-search" placeholder="Type a filename or path…"><div id="quick-results"></div></dialog>
+<input id="folder" type="file" webkitdirectory multiple hidden>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/clike/clike.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/javascript/javascript.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/python/python.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/yaml/yaml.min.js" defer></script>
+<script type="module" src="src/main.js"></script>
+</body></html>
