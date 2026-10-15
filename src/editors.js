@@ -15,6 +15,7 @@ export async function renderVisual(view,api,root){
  if(view==="map")return renderMap(api,root,rec);
  if(view==="encounters")return renderEncounters(api,root,rec);
  if(view==="data")return renderInspector(api,root,rec);
+ if(view==="sprites")return renderSprites(api,root,rec);
 }
 export async function renderMap(api,root,rec){
  const isMap=rec.path.endsWith("/map.json")&&parse(rec)?.object_events;
@@ -182,4 +183,43 @@ function renderTrainerFile(api,root,rec){
    api.changeFor(rec.path,updated);api.notify("Trainer block edited. Reopen the trainer inspector to refresh offsets.","success");api.setView("code")
  },"btn primary"));
  actions.append(btn("Go to code",()=>api.setView("code")));renderOptions()
+}
+
+async function renderSprites(api,root,rec){
+ const paths=api.paths().filter(p=>/\.(png|webp|gif|jpe?g)$/i.test(p));
+ const bar=toolbar(root,"Sprite & graphics library",paths.length+" image assets · preview, zoom and replacement");
+ const select=el("select");select.style.maxWidth="360px";bar.append(select);
+ const selected=rec.isBinary&&/\.(png|webp|gif|jpe?g)$/i.test(rec.path)?rec.path:paths[0];
+ if(!selected){root.append(help("No image assets found. Open a repository with a graphics folder."));return}
+ const near=paths.filter(p=>p.startsWith(selected.substring(0,selected.lastIndexOf("/")+1)));
+ for(const path of (near.length?near:paths).slice(0,500))select.append(option(path,path));
+ if(![...select.options].some(o=>o.value===selected))select.prepend(option(selected,selected));
+ select.value=selected;select.onchange=()=>api.open(select.value);
+ const area=el("div","visual-grid"),preview=panel("Graphics preview"),details=panel("File information");area.append(preview,details);root.append(area);
+ const wrapper=el("div","canvas-shell");wrapper.style.display="grid";wrapper.style.placeItems="center";wrapper.style.padding="22px";wrapper.style.background="repeating-conic-gradient(#263442 0% 25%,#1c2a38 0% 50%) 50% / 24px 24px";preview.append(wrapper);
+ const img=el("img");img.alt="Preview of "+selected;img.style.imageRendering="pixelated";img.style.maxWidth="100%";img.style.maxHeight="500px";img.style.objectFit="contain";wrapper.append(img);
+ details.append(field("File path",selected,()=>{}, "text"));
+ details.append(help("Use the slider to magnify sprites without smoothing. Image replacements preserve the filename but may change PNG palette indexing; verify the project's graphics build."));
+ const controls=el("div","visual-toolbar");preview.append(controls);controls.append(el("span","muted","Zoom"));
+ const zoom=el("input");zoom.type="range";zoom.min="1";zoom.max="12";zoom.value="4";zoom.style.width="150px";controls.append(zoom);
+ const size=el("span","muted");controls.append(size);
+ zoom.oninput=()=>{if(img.naturalWidth){img.style.width=Math.min(img.naturalWidth*Number(zoom.value),1500)+"px";size.textContent=zoom.value+"×"}};
+ const upload=el("input");upload.type="file";upload.accept="image/png,image/webp,image/gif,image/jpeg";details.append(upload);
+ const state=el("p","muted","Loading graphics…");details.append(state);
+ let url=null;
+ try{const file=await api.loadRaw(selected);if(!root.isConnected||!api.isCurrent(rec.path))return;
+  if(!file.isBinary)throw Error("Not a binary graphic file");
+  url=URL.createObjectURL(new Blob([file.bytes],{type:selected.endsWith(".png")?"image/png":"image/*"}));img.src=url;
+  img.onload=()=>{zoom.oninput();state.textContent=img.naturalWidth+" × "+img.naturalHeight+" pixels • "+file.bytes.length+" bytes";setTimeout(()=>URL.revokeObjectURL(url),2000)};
+  img.onerror=()=>{state.textContent="Unable to preview this image";URL.revokeObjectURL(url)};
+  upload.onchange=async()=>{
+   const fresh=upload.files?.[0];if(!fresh)return;
+   const extension=selected.split(".").at(-1).toLowerCase(),mime=fresh.type;
+   if(extension==="png"&&mime!=="image/png")return api.notify("Choose a PNG file to replace this PNG.","error");
+   const test=el("img");const testUrl=URL.createObjectURL(fresh);test.src=testUrl;await new Promise(resolve=>{test.onload=resolve;test.onerror=resolve});
+   if(test.naturalWidth!==img.naturalWidth||test.naturalHeight!==img.naturalHeight){if(!confirm("Replacement dimensions differ ("+test.naturalWidth+"×"+test.naturalHeight+" vs "+img.naturalWidth+"×"+img.naturalHeight+"). Continue?")){URL.revokeObjectURL(testUrl);return}}
+   URL.revokeObjectURL(testUrl);api.changeBytesFor(selected,new Uint8Array(await fresh.arrayBuffer()));img.src=URL.createObjectURL(fresh);img.onload=()=>{zoom.oninput();state.textContent="Replacement staged locally. Review Changes and commit or export to save.";URL.revokeObjectURL(img.src)};
+   api.notify("Staged updated graphic "+selected,"success")
+  }
+ }catch(e){state.textContent="Could not preview graphic: "+e.message}
 }
