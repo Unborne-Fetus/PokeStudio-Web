@@ -1,3 +1,4 @@
+import {speciesCatalog,selectedSpecies,speciesIdentifier} from "./species-forms.js";
 import {createSpreadEditor} from "./spread-editor.js";
 import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
@@ -11,20 +12,18 @@ const button=(text,callback,cls="btn")=>{const e=dom("button",cls,text);e.type="
 const prop=(title,value,fn,type="text")=>{const label=dom("label","form-field");label.append(dom("span","",title));const input=dom("input");input.type=type;input.value=String(value??"");input.onchange=()=>fn(type==="number"?Number(input.value):input.value);label.append(input);return label};
 function art(api,path,className,title){const outer=dom("div",className+" art-frame");const letter=dom("span","art-placeholder",(title||"?").slice(0,2).toUpperCase());outer.append(letter);if(api.hasPath(path)){const img=dom("img","pixel-art");img.alt=title;img.loading="lazy";img.src=api.assetUrl(path);img.onerror=()=>img.remove();outer.append(img)}return outer}
 function monIcon(api,species,shiny=false,dex=new Map()){
- const id=spriteId(species,dex),urls=briskSpriteUrls(id,shiny);
+ const id=spriteId(species,dex);
  const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
- const fallback=dom("span","art-placeholder",species.slice(0,2).toUpperCase());outer.append(fallback);
+ const placeholder=dom("span","art-placeholder",String(species).slice(0,2).toUpperCase());outer.append(placeholder);
  if(id){
-  const icon=dom("img","pixel-art brisk-corrected-icon");
-  icon.alt=species+" icon";icon.loading="lazy";
-  icon.src="https://raw.githubusercontent.com/Unborne-Fetus/Brisk-Dex/main/brisk-dex-icons/"+id+(shiny?"_shiny":"")+".png";
-  icon.onerror=()=>icon.remove();outer.append(icon);
- }
- if(urls){
-  const img=dom("img","brisk-animated-sprite");img.alt=(shiny?"Shiny ":"")+species;
-  img.loading="lazy";img.src=urls.animated;
-  img.onerror=()=>{if(img.src===urls.animated)img.src=urls.still;else img.remove()};
-  outer.append(img)
+  // Brisk Dex corrected icon assets are single-frame PNGs. The older ROM icon PNGs
+  // are vertically stacked sprite sheets and must not be used as ordinary images.
+  const image=dom("img","brisk-corrected-icon");
+  image.alt=(shiny?"Shiny ":"")+species+" icon";
+  image.loading="lazy";
+  image.src="https://raw.githubusercontent.com/Unborne-Fetus/Brisk-Dex/main/brisk-dex-icons/"+id+(shiny?"_shiny":"")+".png";
+  image.onerror=()=>image.remove();
+  outer.append(image)
  }
  return outer
 }
@@ -45,13 +44,14 @@ export async function trainerPage(api,root){
  status.remove();
  const trainers=catalog(file.value);
  const headers={};
- await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"],["ai","include/constants/battle_ai.h"],["moves","include/constants/moves.h"],["abilities","include/constants/abilities.h"],["dex","include/constants/pokedex.h"]].map(async ([key,fileName])=>{
+ await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"],["ai","include/constants/battle_ai.h"],["moves","include/constants/moves.h"],["abilities","include/constants/abilities.h"],["dex","include/constants/pokedex.h"],["species","include/constants/species.h"]].map(async ([key,fileName])=>{
   try{headers[key]=(await api.loadRaw(fileName)).value||""}catch{headers[key]=""}
  }));
  if(!root.isConnected)return;
  const pokemonOptions=pokemonChoiceLists(trainers,headers);
  const validMoves=definitions(headers.moves,"MOVE"),validAbilities=definitions(headers.abilities,"ABILITY");
  const dex=nationalDexIndex(headers.dex);
+ const speciesForms=speciesCatalog(headers.species,headers.dex);
  const editable=trainers.filter(t=>!isPlaceholderTrainer(t));
  const dropdowns=trainerDropdownOptions(trainers,api.paths(),headers.ai);
  if(!trainers.length){root.append(dom("div","warn","No trainer definitions were recognized in this project."));return}
@@ -138,9 +138,23 @@ export async function trainerPage(api,root){
    if(confirm("Remove "+pokemon.species+" from "+selected.id+"?")&&apply(raw=>removeMon(raw,chosenMon)))renderDetails()
   },"btn"));editPanel.append(editBar);
   const lead=dom("div","pokemon-lead");lead.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex));
-  const leadInputs=dom("div","pokemon-lead-fields");leadInputs.append(prop("Species / form",pokemon.species,v=>{
-   if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,v,pokemon.held,pokemon.gender))))renderDetails()
-  }));
+  const leadInputs=dom("div","pokemon-lead-fields");
+  const choice=selectedSpecies(pokemon.species,speciesForms);
+  if(choice){
+   leadInputs.append(autocomplete("Species",choice.base,speciesForms.choices,value=>{
+    const next=speciesForms.groups.has(value)?value:speciesForms.choices.find(c=>c.label===value)?.value;
+    if(!next)return api.notify("Choose a valid species from this project.","error");
+    if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,speciesIdentifier(next,next,speciesForms),pokemon.held,pokemon.gender))))renderDetails()
+   },{allowCustom:false,placeholder:"Search Pokémon species…"}));
+   const variants=speciesForms.groups.get(choice.base)||[];
+   leadInputs.append(autocomplete("Form",choice.form,variants,value=>{
+    const next=variants.find(v=>v.value===value||v.label===value)?.value;
+    if(!next)return api.notify("That form is not defined for "+choice.base,"error");
+    if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,speciesIdentifier(choice.base,next,speciesForms),pokemon.held,pokemon.gender))))renderDetails()
+   },{allowCustom:false,placeholder:"Search valid forms…"}));
+  }else{
+   leadInputs.append(prop("Species / form (unsupported identifier)",pokemon.species,v=>api.notify("Unknown species; select a defined species in source to enable form editing.","error")));
+  }
   leadInputs.append(autocomplete("Held item",pokemon.held,pokemonOptions["Held item"],v=>{
    if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,pokemon.species,v,pokemon.gender))))renderDetails()
   },{placeholder:"Search held items…"}));
@@ -158,7 +172,16 @@ export async function trainerPage(api,root){
      editMonField(chosenMon,key,choice.value);
     },{allowCustom:false,placeholder:"Search defined abilities…"}));
     else if(["Nature","Ball","Tera Type"].includes(key))form.append(autocomplete(key,pokemon.fields[key]??"",pokemonOptions[key],v=>editMonField(chosenMon,key,v),{placeholder:"Search "+key.toLowerCase()+"…"}));
-    else form.append(prop(key,pokemon.fields[key]??"",v=>editMonField(chosenMon,key,v),["Level","Happiness","Dynamax Level"].includes(key)?"number":"text"));
+    else if(key==="Dynamax Level"){
+     const dynamax=dom("label","form-field");dynamax.append(dom("span","","Dynamax Level (0–10)"));
+     const input=dom("input");input.type="number";input.min="0";input.max="10";input.step="1";input.value=pokemon.fields[key]??"0";
+     input.onchange=()=>{
+      const value=Math.round(Number(input.value));
+      if(!Number.isFinite(value)||value<0||value>10){api.notify("Dynamax Level must be an integer from 0 to 10.","error");input.value=pokemon.fields[key]??"0";return}
+      editMonField(chosenMon,key,value===0?"":String(value));
+     };dynamax.append(input);form.append(dynamax)
+    }
+    else form.append(prop(key,pokemon.fields[key]??"",v=>editMonField(chosenMon,key,v),["Level","Happiness"].includes(key)?"number":"text"));
    }
   }
   editPanel.append(form);
