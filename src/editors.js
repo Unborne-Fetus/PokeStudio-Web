@@ -1,3 +1,4 @@
+import {createMetatileRenderer} from "./tilesets.js";
 /* Source-aware graphical editors. No game data is reinterpreted on disk unless a field is edited. */
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
 const btn=(label,onClick,cls="btn")=>{const b=el("button",cls,label);b.type="button";b.onclick=onClick;return b};
@@ -42,7 +43,7 @@ export async function renderMap(api,root,rec){
  for(const key of ["requires_flash","allow_cycling","allow_escaping","allow_running","show_map_name"]){if(key in map)meta.append(booleanField(key,map[key],value=>{map[key]=value;saveObject(api,initialPath,map)}))}
  const connections=panel("Connections");left.append(connections);
  for(const c of map.connections||[]){const row=el("div","item-row",c.direction+" → "+c.map+" (offset "+c.offset+")");connections.append(row)}
- let layout,bin,tiles,selected=-1,painting=false,dragging=false,dragged=false,scale=24;
+ let layout,bin,tiles,renderer=null,selected=-1,painting=false,dragging=false,dragged=false,scale=24;
  let w=32,h=20;
  function group(){return map[modeSelect.value]||[]}
  function draw(){
@@ -53,7 +54,8 @@ export async function renderMap(api,root,rec){
    const id=tiles?tiles[y*w+x]&1023:0;
    const hue=(id*67)%360;ctx.fillStyle=tiles?'hsl('+hue+' 27% '+(24+(id%7))+'%)':((x+y)%2?"#1e3749":"#223c50");
    ctx.fillRect(x*scale,y*scale,scale,scale);
-   if(tiles&&scale>=25){ctx.fillStyle="#d7e7f1";ctx.font="9px monospace";ctx.fillText(String(id),x*scale+2,y*scale+10)}
+   if(renderer&&tiles)renderer.draw(ctx,id,x*scale,y*scale,scale);
+   if(tiles&&scale>=25&&!renderer){ctx.fillStyle="#d7e7f1";ctx.font="9px monospace";ctx.fillText(String(id),x*scale+2,y*scale+10)}
   }
   ctx.strokeStyle="#acc7dd20";ctx.lineWidth=.5;
   for(let x=0;x<=w;x++){ctx.beginPath();ctx.moveTo(x*scale,0);ctx.lineTo(x*scale,h*scale);ctx.stroke()}
@@ -105,7 +107,8 @@ export async function renderMap(api,root,rec){
   if(!raw.isBinary||raw.bytes.length!==w*h*2)throw Error("Map binary length does not match layout dimensions");
   bin={...raw,path:layout.blockdata_filepath};tiles=new Uint16Array(w*h);const data=new DataView(raw.bytes.buffer,raw.bytes.byteOffset,raw.bytes.byteLength);for(let i=0;i<tiles.length;i++)tiles[i]=data.getUint16(i*2,true);
   tilesNote.className="tile-legend";tilesNote.textContent="Layout: "+w+" × "+h+" • "+layout.blockdata_filepath+" • Raw metatile IDs. Native tileset artwork rendering is not yet supported; painting preserves existing collision/elevation bits.";
-  draw()
+  draw();
+  try{renderer=await createMetatileRenderer(api,layout);if(api.isCurrent(initialPath)&&root.isConnected){tilesNote.textContent+=" • Experimental artwork preview: "+renderer.primary+" + "+renderer.secondary;draw()}}catch(err){tilesNote.textContent+=" • Tileset artwork unavailable ("+err.message+")."}
  }catch(err){tilesNote.className="warn";tilesNote.textContent="Event editing is available, but map.bin could not be loaded: "+err.message;draw()}
 }
 export function renderEncounters(api,root,rec){
