@@ -90,3 +90,25 @@ test("global history groups keystrokes and handles visual binary changes",()=>{
  assert.equal(h.canUndo,false);
  assert.equal(h.canRedo,true)
 });
+
+import {trainerDropdownOptions,optionsWithCurrent} from "../src/trainer-options.js";
+test("trainer dropdowns populate project-defined labels with distinct values",()=>{
+ const trainers=[
+  {meta:{Pic:"Leader Roxanne",Class:"Leader",Music:"Female",AI:"Check Viability",Gender:"Female","Double Battle":"No"}},
+  {meta:{Pic:"Aqua Grunt M",Class:"Team Aqua",Music:"Aqua",AI:"Basic Trainer",Gender:"Male","Double Battle":"Yes"}},
+  {meta:{Pic:"Leader Roxanne",Class:"Leader",Music:"Female",AI:"Check Viability"}}
+ ];
+ const list=trainerDropdownOptions(trainers,["graphics/trainers/front_pics/leader_roxanne.png"]);
+ assert.deepEqual(list.Class.map(o=>o.value),["Leader","Team Aqua"]);
+ assert.deepEqual(list.Music.map(o=>o.value),["Aqua","Female"]);
+ assert.deepEqual(list.AI.map(o=>o.value),["Basic Trainer","Check Viability"]);
+ assert.equal(list.Pic.find(o=>o.value==="Leader Roxanne").hasSprite,true);
+ assert.deepEqual(list.Gender.map(o=>o.value),["Male","Female"]);
+ assert.deepEqual(list["Double Battle"].map(o=>o.value),["No","Yes"])
+});
+test("nonstandard trainer dropdown values are preserved rather than overwritten",()=>{
+ const dropdowns=trainerDropdownOptions([{meta:{AI:"Basic Trainer"}}]);
+ assert.equal(optionsWithCurrent(dropdowns.AI,"Omniscient").at(0).value,"Omniscient");
+ assert.equal(optionsWithCurrent(dropdowns.AI,"Basic Trainer").length,1);
+ assert.equal(optionsWithCurrent(dropdowns.Gender,"").at(0).value,"")
+});
