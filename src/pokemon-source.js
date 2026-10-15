@@ -76,7 +76,7 @@ export function eggMoves(body){
  return [...body.matchAll(/\b(MOVE_[A-Z0-9_]+)\s*,/g)].map(x=>x[1]).filter(x=>x!=="MOVE_UNAVAILABLE");
 }
 export function editLevelMoves(source,name,rows){
- if(!rows.every(x=>Number.isInteger(x.level)&&x.level>=1&&x.level<=100&&/^MOVE_[A-Z0-9_]+$/.test(x.move)))throw Error("Levels must be 1–100 and moves must be valid");
+ if(!rows.every(x=>Number.isInteger(x.level)&&x.level>=0&&x.level<=100&&/^MOVE_[A-Z0-9_]+$/.test(x.move)))throw Error("Levels must be 0–100 and moves must be valid");
  const found=arrayEntry(source,name);
  if(!found||!/\bLEVEL_UP_END\b/.test(found.body))throw Error("Can't safely edit a nonstandard level-up list");
  const stripped=found.body.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g,"").trim();
