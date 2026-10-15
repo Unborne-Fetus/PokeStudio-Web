@@ -112,3 +112,42 @@ test("nonstandard trainer dropdown values are preserved rather than overwritten"
  assert.equal(optionsWithCurrent(dropdowns.AI,"Basic Trainer").length,1);
  assert.equal(optionsWithCurrent(dropdowns.Gender,"").at(0).value,"")
 });
+
+import {isPlaceholderTrainer,pokemonChoiceLists,searchSuggestions,itemNamesFromHeader,ballNamesFromHeader} from "../src/autocomplete-data.js";
+test("placeholder trainer entries are hidden by ID only and never removed from source",()=>{
+ const sampleText=`=== TRAINER_NONE ===
+Name:
+Pic: Hiker
+
+=== TRAINER_DUMMY_1 ===
+Name: PLACEHOLDER
+Pic: Hiker
+
+=== TRAINER_GRUNT_AQUA_HIDEOUT_2 ===
+Name: GRUNT
+Pic: Aqua Grunt M
+
+Blastoise
+Level: 37
+`;
+ const all=catalog(sampleText),visible=all.filter(t=>!isPlaceholderTrainer(t));
+ assert.deepEqual(visible.map(t=>t.id),["TRAINER_GRUNT_AQUA_HIDEOUT_2"]);
+ const updated=replaceTrainer(sampleText,visible[0].id,changeMeta(visible[0].raw,"Name","ARCHIE"));
+ assert.ok(updated.includes("=== TRAINER_GRUNT_AQUA_HIDEOUT_2 ===\nName: ARCHIE"));
+ assert.ok(updated.startsWith("=== TRAINER_NONE ==="));
+ assert.ok(updated.includes("=== TRAINER_DUMMY_1 ==="));
+ assert.equal(updated.includes("=== TRAINER_ARCHIE ==="),false)
+});
+test("nature, held item, ball, Tera suggestion menus filter partial matches",()=>{
+ const headers={items:"ITEM_POKE_BALL = 1,\nITEM_DIVE_BALL = 2,\nITEM_LEFTOVERS = 3,\nITEM_CHOICE_SCARF = 4,",pokemon:""};
+ const choices=pokemonChoiceLists([{pokemon:[{held:"Eviolite",fields:{"Tera Type":"Fire",Nature:"Adamant",Ball:"Dive"}}]}],headers);
+ assert.ok(choices.Nature.includes("Adamant"));
+ assert.ok(choices["Tera Type"].includes("Fire"));
+ assert.ok(choices.Ball.includes("Dive"));
+ assert.ok(choices["Held item"].includes("Leftovers"));
+ assert.ok(choices["Held item"].includes("Eviolite"));
+ assert.equal(searchSuggestions(choices.Nature,"ada")[0].value,"Adamant");
+ assert.equal(searchSuggestions(choices["Held item"],"left")[0].value,"Leftovers");
+ assert.equal(searchSuggestions(choices.Ball,"div")[0].value,"Dive");
+ assert.equal(searchSuggestions(choices["Tera Type"],"ste")[0].value,"Steel");
+});
