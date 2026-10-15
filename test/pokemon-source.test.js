@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {speciesEntries,readFields,editSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "../src/pokemon-source.js";
+import {speciesEntries,readFields,editSpeciesField,setSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "../src/pokemon-source.js";
 const sample=[
 "#if P_FAMILY_BULBASAUR",
 "    [SPECIES_BULBASAUR] =",
@@ -69,4 +69,11 @@ test("egg moves can be read and edited without removing their terminator",()=>{
  const next=editEggMoves(egg,"sBulbasaurEggMoveLearnset",["MOVE_TACKLE"]);
  assert.match(next,/MOVE_TACKLE,\n    MOVE_UNAVAILABLE,/);
  assert.throws(()=>editEggMoves(egg,"sBulbasaurEggMoveLearnset",["bad"]),/Invalid/);
+});
+
+test("new optional teaching rule is added only to the chosen species",()=>{
+ const next=setSpeciesField(sample,"SPECIES_IVYSAUR","teachingType","ALL_TEACHABLES");
+ const mons=speciesEntries(next);
+ assert.equal(readFields(mons[0].body).has("teachingType"),false);
+ assert.equal(readFields(mons[1].body).get("teachingType").value,"ALL_TEACHABLES");
 });
