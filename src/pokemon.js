@@ -1,6 +1,6 @@
 import {autocomplete} from "./autocomplete.js";
 import {definitions} from "./game-legal.js";
-import {speciesEntries,readFields,editSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "./pokemon-source.js";
+import {speciesEntries,readFields,editSpeciesField,setSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "./pokemon-source.js";
 
 const e=(tag,cls="",text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
 const button=(text,cb,cls="btn")=>{const node=e("button",cls,text);node.type="button";node.onclick=cb;return node};
@@ -225,13 +225,27 @@ export async function pokemonPage(api,root){
   if(ticket!==serial)return;
   const teach=readPointer(fields,"teachableLearnset");
   if(teach){
-   const tm=section("TM / HM / tutor moves","Linked teachable list: "+teach);
-   if(teachPaths.length){
-    tm.append(e("p","muted","Teachable moves are stored separately. Open the corresponding source to edit advanced or generated lists."));
-    teachPaths.slice(0,8).forEach(path=>tm.append(button("Open "+path.split("/").at(-1),()=>api.open(path))))
-   }else tm.append(e("p","muted","No editable teachable-learnset source was found in the repository tree. This list may be generated."));
+   const tm=section("TM / HM / tutor moves","Teachable moves are compiled from source lists. The generated teachable_learnsets.h is not the right file to edit.");
+   const learning=fields.get("teachingType")?.value||"DEFAULT_LEARNING";
+   const modes=[
+    {value:"DEFAULT_LEARNING",label:"Standard: listed moves + universal moves"},
+    {value:"TM_ILLITERATE",label:"Restricted: no automatic universal moves"},
+    {value:"ALL_TEACHABLES",label:"Can learn every available TM / tutor move"}
+   ];
+   tm.append(choice("TM and tutor learning behavior",learning,modes,v=>{
+    try{
+     api.changeFor(where.path,setSpeciesField(record.value,selected,"teachingType",v));
+     api.notify("Staged TM/tutor learning behavior for "+pretty(selected),"success");renderDetails();
+    }catch(err){api.notify(err.message,"error")}
+   }));
+   tm.append(e("p","muted","A move must also be available as a TM or tutor move. For individual compatibility, edit the Pokémon's potential teachables list (all_learnables.json) if that file is populated; the build will regenerate the final learnset."));
+   const all="src/data/pokemon/all_learnables.json",special="src/data/pokemon/special_movesets.json";
+   if(paths.has(all))tm.append(button("Open potential TM / tutor moves",()=>api.open(all)));
+   if(paths.has(special))tm.append(button("Open universal / signature moves",()=>api.open(special)));
+   if(teachPaths.length)teachPaths.slice(0,4).forEach(path=>tm.append(button("Open "+path.split("/").at(-1),()=>api.open(path))));
    detail.append(tm)
   }
+
   const other=section("More settings","These settings are preserved exactly. Open the original code to change graphics, animations, descriptions, and other advanced values.");
   const d=e("details");d.append(e("summary","","View all species fields"),e("pre","source-preview",entry.body.slice(0,16000)));other.append(d);detail.append(other);
  }
