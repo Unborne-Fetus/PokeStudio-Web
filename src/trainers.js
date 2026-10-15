@@ -141,17 +141,23 @@ export async function trainerPage(api,root){
    if(key==="Shiny"||key==="Gigantamax"){
     const label=dom("label","form-check"),input=dom("input");input.type="checkbox";input.checked=pokemon.fields[key]==="Yes";input.onchange=()=>editMonField(chosenMon,key,input.checked?"Yes":"No");label.append(input,document.createTextNode(key));form.append(label)
    } else {
-    if(["Nature","Ball","Tera Type"].includes(key))form.append(autocomplete(key,pokemon.fields[key]??"",pokemonOptions[key],v=>editMonField(chosenMon,key,v),{placeholder:"Search "+key.toLowerCase()+"…"}));
+    if(key==="Ability")form.append(autocomplete(key,pokemon.fields.Ability??"",validAbilities,v=>{
+     const choice=normalizeChoice(v,validAbilities);if(!choice){api.notify("Unknown ability in this game","error");return}
+     editMonField(chosenMon,key,choice.value);
+    },{allowCustom:false,placeholder:"Search defined abilities…"}));
+    else if(["Nature","Ball","Tera Type"].includes(key))form.append(autocomplete(key,pokemon.fields[key]??"",pokemonOptions[key],v=>editMonField(chosenMon,key,v),{placeholder:"Search "+key.toLowerCase()+"…"}));
     else form.append(prop(key,pokemon.fields[key]??"",v=>editMonField(chosenMon,key,v),["Level","Happiness","Dynamax Level"].includes(key)?"number":"text"));
    }
   }
   editPanel.append(form);
   const moveTitle=dom("h3","","Moves (up to four)");editPanel.append(moveTitle);
   const moves=dom("div","moves-grid");
-  for(let i=0;i<4;i++)moves.append(prop("Move "+(i+1),pokemon.moves[i]||"",v=>{
-   const updated=pokemon.moves.slice();updated[i]=v;
+  for(let i=0;i<4;i++)moves.append(autocomplete("Move "+(i+1),pokemon.moves[i]||"",validMoves,v=>{
+   const choice=v?normalizeChoice(v,validMoves):null;
+   if(v&&!choice){api.notify("Unknown move in this game","error");return}
+   const updated=pokemon.moves.slice();updated[i]=choice?.value||"";
    if(apply(raw=>editMon(raw,chosenMon,b=>setMoves(b,updated))))renderDetails()
-  }));
+  },{allowCustom:false,placeholder:"Search defined moves…"}));
   editPanel.append(moves);
   const note=dom("p","muted","Absent fields use the project's default behavior. Moves, trainer AI and ability names must be valid for the connected expansion version.");editPanel.append(note);
   const advanced=dom("details","trainer-advanced");advanced.append(dom("summary","","View selected trainer's raw source block"));
