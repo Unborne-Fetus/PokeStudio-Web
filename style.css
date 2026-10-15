@@ -160,3 +160,19 @@ input::placeholder{color:#a991a1}
 .spread-row input[type=range]{min-width:0;width:100%;accent-color:#eda66c;padding:0;border:0}
 .spread-row input[type=number]{width:53px;min-width:0;text-align:center;padding:5px 2px}
 .spread-row small{color:#bda5b3;font-size:11px}
+
+/* Clean Brisk Dex corrected sprites with a restrained 2-second animation cycle. */
+.brisk-mon-portrait{isolation:isolate;overflow:hidden}
+.brisk-mon-portrait>.brisk-corrected-icon{
+ position:relative;z-index:2;display:block;width:100%;height:100%;
+ object-fit:contain;image-rendering:pixelated;
+ animation:brisk-icon-bob 2s ease-in-out infinite;
+ transform-origin:50% 85%;will-change:transform
+}
+.brisk-mon-portrait>.brisk-corrected-icon:only-of-type{background:transparent}
+@keyframes brisk-icon-bob{
+ 0%,15%,35%,100%{transform:translateY(0) scale(1)}
+ 22%{transform:translateY(-6px) scale(1.035)}
+ 29%{transform:translateY(-2px) scale(.985)}
+}
+@media(prefers-reduced-motion:reduce){.brisk-mon-portrait>.brisk-corrected-icon{animation:none}}
