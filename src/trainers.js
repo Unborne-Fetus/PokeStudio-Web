@@ -1,4 +1,7 @@
 import {autocomplete} from "./autocomplete.js";
+import {definitions,normalizeChoice} from "./game-legal.js";
+import {STAT_NAMES,readSpread,applySpread,spreadTotal,spreadText,spreadIsValid} from "./stat-spreads.js";
+import {nationalDexIndex,spriteId,briskSpriteUrls} from "./brisk-art.js";
 import {isPlaceholderTrainer,pokemonChoiceLists} from "./autocomplete-data.js";
 import {DROPDOWN_FIELDS,trainerDropdownOptions,optionsWithCurrent} from "./trainer-options.js";
 import {catalog,mon,fields,changeMeta,changeField,editMon,addMon,removeMon,shiftMon,renameMon,setMoves,replaceTrainer,monAsset,picAsset} from "./trainer-data.js";
@@ -6,7 +9,13 @@ const dom=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.classNam
 const button=(text,callback,cls="btn")=>{const e=dom("button",cls,text);e.type="button";e.onclick=callback;return e};
 const prop=(title,value,fn,type="text")=>{const label=dom("label","form-field");label.append(dom("span","",title));const input=dom("input");input.type=type;input.value=String(value??"");input.onchange=()=>fn(type==="number"?Number(input.value):input.value);label.append(input);return label};
 function art(api,path,className,title){const outer=dom("div",className+" art-frame");const letter=dom("span","art-placeholder",(title||"?").slice(0,2).toUpperCase());outer.append(letter);if(api.hasPath(path)){const img=dom("img","pixel-art");img.alt=title;img.loading="lazy";img.src=api.assetUrl(path);img.onerror=()=>img.remove();outer.append(img)}return outer}
-function monIcon(api,species){return art(api,"graphics/pokemon/"+monAsset(species)+"/icon.png","mon-portrait",species)}
+function monIcon(api,species,shiny=false,dex=new Map()){
+ const id=spriteId(species,dex),urls=briskSpriteUrls(id,shiny);
+ const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
+ outer.append(art(api,"graphics/pokemon/"+monAsset(species)+"/icon.png","icon-fallback",species));
+ if(urls){const img=dom("img","brisk-animated-sprite");img.alt=(shiny?"Shiny ":"")+species;img.loading="lazy";img.src=urls.animated;img.onerror=()=>{if(img.src===urls.animated)img.src=urls.still;else img.remove()};outer.append(img)}
+ return outer
+}
 function portrait(api,pic){return art(api,"graphics/trainers/front_pics/"+picAsset(pic)+".png","trainer-portrait",pic)}
 const categories=["Name","Class","Pic","Gender","Music","AI","Items","Double Battle","Battle Type","Mugshot"];
 const monFields=["Level","Ability","Nature","Ball","Tera Type","Happiness","IVs","EVs","Shiny","Gigantamax","Dynamax Level"];
@@ -24,11 +33,13 @@ export async function trainerPage(api,root){
  status.remove();
  const trainers=catalog(file.value);
  const headers={};
- await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"],["ai","include/constants/battle_ai.h"]].map(async ([key,fileName])=>{
+ await Promise.all([["items","include/constants/items.h"],["pokemon","include/constants/pokemon.h"],["ai","include/constants/battle_ai.h"],["moves","include/constants/moves.h"],["abilities","include/constants/abilities.h"],["dex","include/constants/pokedex.h"]].map(async ([key,fileName])=>{
   try{headers[key]=(await api.loadRaw(fileName)).value||""}catch{headers[key]=""}
  }));
  if(!root.isConnected)return;
  const pokemonOptions=pokemonChoiceLists(trainers,headers);
+ const validMoves=definitions(headers.moves,"MOVE"),validAbilities=definitions(headers.abilities,"ABILITY");
+ const dex=nationalDexIndex(headers.dex);
  const editable=trainers.filter(t=>!isPlaceholderTrainer(t));
  const dropdowns=trainerDropdownOptions(trainers,api.paths(),headers.ai);
  if(!trainers.length){root.append(dom("div","warn","No trainer definitions were recognized in this project."));return}
@@ -96,7 +107,7 @@ export async function trainerPage(api,root){
   const cards=dom("div","team-grid");team.append(cards);
   selected.pokemon.forEach((pokemon,i)=>{
    const card=button("",()=>{chosenMon=i;renderDetails()},"team-card"+(i===chosenMon?" active":""));
-   const top=dom("div","team-card-top");top.append(monIcon(api,pokemon.species));
+   const top=dom("div","team-card-top");top.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex));
    const info=dom("div");info.append(dom("strong","",pokemon.species.replace(/^SPECIES_/,"").replaceAll("_"," ")));
    info.append(dom("small","","Lv. "+(pokemon.fields.Level||"100")+(pokemon.fields.Shiny==="Yes"?" · ✨ Shiny":"")));
    top.append(info);card.append(top);
@@ -114,7 +125,7 @@ export async function trainerPage(api,root){
   editBar.append(button("Remove",()=>{
    if(confirm("Remove "+pokemon.species+" from "+selected.id+"?")&&apply(raw=>removeMon(raw,chosenMon)))renderDetails()
   },"btn"));editPanel.append(editBar);
-  const lead=dom("div","pokemon-lead");lead.append(monIcon(api,pokemon.species));
+  const lead=dom("div","pokemon-lead");lead.append(monIcon(api,pokemon.species,pokemon.fields.Shiny==="Yes",dex));
   const leadInputs=dom("div","pokemon-lead-fields");leadInputs.append(prop("Species / form",pokemon.species,v=>{
    if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,v,pokemon.held,pokemon.gender))))renderDetails()
   }));
@@ -126,7 +137,7 @@ export async function trainerPage(api,root){
   genderSelect.onchange=()=>{if(apply(raw=>editMon(raw,chosenMon,b=>renameMon(b,pokemon.species,pokemon.held,genderSelect.value))))renderDetails()};
   gender.append(genderSelect);leadInputs.append(gender);lead.append(leadInputs);editPanel.append(lead);
   const form=dom("div","pokemon-form");
-  for(const key of monFields){
+  for(const key of monFields.filter(k=>k!=="IVs"&&k!=="EVs")){
    if(key==="Shiny"||key==="Gigantamax"){
     const label=dom("label","form-check"),input=dom("input");input.type="checkbox";input.checked=pokemon.fields[key]==="Yes";input.onchange=()=>editMonField(chosenMon,key,input.checked?"Yes":"No");label.append(input,document.createTextNode(key));form.append(label)
    } else {
