@@ -4,7 +4,7 @@ import {createZip} from "./zip.js";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
-let currentPath=null,view="code",source="remote",directory="",loadingEditor=false,editorCM=null,openSerial=0,draftTimer;
+let currentPath=null,view="code",source="remote",directory="",loadingEditor=false,editorCM=null,openSerial=0;const draftTimers=new Map();
 const readonlyNote="Changes remain local until exported or committed. Your GitHub repository is not modified automatically.";
 function info(message,type=""){const notice=$("notice");notice.textContent=message;notice.className=type}
 function status(){const changes=modified();$("dirty-counter").textContent=changes.length+" change"+(changes.length===1?"":"s");$("dirty-counter").classList.toggle("changed",Boolean(changes.length));$("repo-info").textContent=source==="local"?"Local folder":repo.repo||"Not connected";$("branch-info").textContent=source==="local"?"Local workspace":repo.branch||"Select a repository";$("current-info").textContent=currentPath?currentPath.split("/").at(-1):"None";const r=current();$("file-info").textContent=r?(r.isBinary?(r.bytes.length+" bytes • binary"):(r.value.length+" characters")):"—"}
@@ -37,7 +37,7 @@ function setEditorValue(value){loadingEditor=true;if(editorCM){const scroll=edit
 function editorValue(){return editorCM?editorCM.getValue():$("editor").value}
 function setEditorMode(path){if(!editorCM)return;const ext=path.split(".").at(-1).toLowerCase();const mode=ext==="json"?"application/json":ext==="js"?"text/javascript":ext==="py"?"python":ext==="yml"||ext==="yaml"?"yaml":ext==="c"||ext==="h"?"text/x-csrc":ext==="css"?"text/css":"text/plain";editorCM.setOption("mode",mode)}
 function updatePosition(){let line=1,col=1;if(editorCM){const cur=editorCM.getCursor();line=cur.line+1;col=cur.ch+1}else{const value=$("editor").value.slice(0,$("editor").selectionStart);line=value.split("\n").length;col=value.length-value.lastIndexOf("\n")}const value=editorValue();$("position").textContent="Ln "+line+", Col "+col;$("code-status").textContent=(currentPath||"No file open")+"  •  "+value.split("\n").length+" lines"}
-function changedFile(path){const rec=files.get(path);if(!rec)return;status();renderTree();if(view==="changes")renderChanges();clearTimeout(draftTimer);draftTimer=setTimeout(()=>writeDraft(path,rec),500)}
+function changedFile(path){const rec=files.get(path);if(!rec)return;status();renderTree();if(view==="changes")renderChanges();clearTimeout(draftTimers.get(path));draftTimers.set(path,setTimeout(()=>writeDraft(path,rec),500))}
 function changeFor(path,value){const rec=files.get(path);if(!rec||rec.isBinary)throw Error("File is not editable text: "+path);rec.value=value;if(currentPath===path&&view==="code"&&editorValue()!==value)setEditorValue(value);changedFile(path)}
 function changeBytesFor(path,bytes){const rec=files.get(path);if(!rec||!rec.isBinary)throw Error("Binary file not loaded: "+path);rec.bytes=bytes.slice();changedFile(path)}
 function setView(next){view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
