@@ -4,6 +4,7 @@ import {createZip} from "./zip.js";
 import {EditHistory} from "./history.js";
 import {mapStudio} from "./maps.js";
 import {trainerPage} from "./trainers.js?rev=icon-frames-2";
+import {pokemonPage} from "./pokemon.js";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
@@ -69,11 +70,12 @@ function applyHistory(direction){
 function setView(next){view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
 function renderView(){
  $("codepane").hidden=view!=="code";
- $("visual").hidden=!["map","trainers","encounters","data","sprites"].includes(view);
+ $("visual").hidden=!["map","trainers","pokemon","encounters","data","sprites"].includes(view);
  $("changes").hidden=view!=="changes";
  if(view==="changes")renderChanges();
  if(view==="map")mapStudio(visualApi,$("visual"),current()).catch(e=>info("Map Studio error: "+e.message,"error"));
  else if(view==="trainers")trainerPage(visualApi,$("visual")).catch(e=>info("Trainer Studio error: "+e.message,"error"));
+  else if(view==="pokemon")pokemonPage(visualApi,$("visual")).catch(e=>info("Pokémon Studio error: "+e.message,"error"));
  else if(["encounters","data","sprites"].includes(view))renderVisual(view,visualApi,$("visual")).catch(e=>info("Visual editor error: "+e.message,"error"));
  if(editorCM&&view==="code")setTimeout(()=>editorCM.refresh(),0)
 }
