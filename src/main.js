@@ -1,13 +1,18 @@
 import {GitHubWorkspace,textPath,binaryPath} from "./github.js";
 import {renderVisual} from "./editors.js";
 import {createZip} from "./zip.js";
+import {EditHistory} from "./history.js";
+import {mapStudio} from "./maps.js";
+import {trainerPage} from "./trainers.js";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
+const history=new EditHistory();
+let assetPaths=new Set();
 let currentPath=null,view="code",source="remote",directory="",loadingEditor=false,editorCM=null,openSerial=0;const draftTimers=new Map();
 const readonlyNote="Changes remain local until exported or committed. Your GitHub repository is not modified automatically.";
 function info(message,type=""){const notice=$("notice");notice.textContent=message;notice.className=type}
-function status(){const changes=modified();$("dirty-counter").textContent=changes.length+" change"+(changes.length===1?"":"s");$("dirty-counter").classList.toggle("changed",Boolean(changes.length));$("repo-info").textContent=source==="local"?"Local folder":repo.repo||"Not connected";$("branch-info").textContent=source==="local"?"Local workspace":repo.branch||"Select a repository";$("current-info").textContent=currentPath?currentPath.split("/").at(-1):"None";const r=current();$("file-info").textContent=r?(r.isBinary?(r.bytes.length+" bytes • binary"):(r.value.length+" characters")):"—"}
+function status(){const changes=modified();$("undo-btn").disabled=!history.canUndo;$("redo-btn").disabled=!history.canRedo;$("dirty-counter").textContent=changes.length+" change"+(changes.length===1?"":"s");$("dirty-counter").classList.toggle("changed",Boolean(changes.length));$("repo-info").textContent=source==="local"?"Local folder":repo.repo||"Not connected";$("branch-info").textContent=source==="local"?"Local workspace":repo.branch||"Select a repository";$("current-info").textContent=currentPath?currentPath.split("/").at(-1):"None";const r=current();$("file-info").textContent=r?(r.isBinary?(r.bytes.length+" bytes • binary"):(r.value.length+" characters")):"—"}
 function equalBytes(a,b){if(!a||!b||a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true}
 function isDirty(r){return Boolean(r&&(r.isBinary?!equalBytes(r.bytes,r.originalBytes):r.value!==r.original))}
 function modified(){return [...files.entries()].filter(([,r])=>isDirty(r)).map(([path,r])=>({path,...r}))}
@@ -38,11 +43,44 @@ function editorValue(){return editorCM?editorCM.getValue():$("editor").value}
 function setEditorMode(path){if(!editorCM)return;const ext=path.split(".").at(-1).toLowerCase();const mode=ext==="json"?"application/json":ext==="js"?"text/javascript":ext==="py"?"python":ext==="yml"||ext==="yaml"?"yaml":ext==="c"||ext==="h"?"text/x-csrc":ext==="css"?"text/css":"text/plain";editorCM.setOption("mode",mode)}
 function updatePosition(){let line=1,col=1;if(editorCM){const cur=editorCM.getCursor();line=cur.line+1;col=cur.ch+1}else{const value=$("editor").value.slice(0,$("editor").selectionStart);line=value.split("\n").length;col=value.length-value.lastIndexOf("\n")}const value=editorValue();$("position").textContent="Ln "+line+", Col "+col;$("code-status").textContent=(currentPath||"No file open")+"  •  "+value.split("\n").length+" lines"}
 function changedFile(path){const rec=files.get(path);if(!rec)return;status();renderTree();if(view==="changes")renderChanges();clearTimeout(draftTimers.get(path));draftTimers.set(path,setTimeout(()=>writeDraft(path,rec),500))}
-function changeFor(path,value){const rec=files.get(path);if(!rec||rec.isBinary)throw Error("File is not editable text: "+path);rec.value=value;if(currentPath===path&&view==="code"&&editorValue()!==value)setEditorValue(value);changedFile(path)}
-function changeBytesFor(path,bytes){const rec=files.get(path);if(!rec||!rec.isBinary)throw Error("Binary file not loaded: "+path);rec.bytes=bytes.slice();changedFile(path)}
+function changeFor(path,value,options={}){
+ const rec=files.get(path);if(!rec||rec.isBinary)throw Error("File is not editable text: "+path);
+ if(rec.value===value)return;
+ history.record(path,rec.value,value,options);
+ rec.value=value;
+ if(currentPath===path&&view==="code"&&editorValue()!==value)setEditorValue(value);
+ changedFile(path)
+}
+function changeBytesFor(path,bytes){
+ const rec=files.get(path);if(!rec||!rec.isBinary)throw Error("Binary file not loaded: "+path);
+ if(!history.record(path,rec.bytes,bytes))return;
+ rec.bytes=bytes.slice();changedFile(path)
+}
+function applyHistory(direction){
+ const item=direction==="undo"?history.undo():history.redo();
+ if(!item)return;
+ const rec=files.get(item.path);
+ if(!rec){info("History references an unloaded file.","error");return}
+ if(rec.isBinary)rec.bytes=item.value.slice();else rec.value=item.value;
+ if(currentPath===item.path&&view==="code")setEditorValue(rec.isBinary?"Binary file":rec.value);
+ changedFile(item.path);renderView();
+ info((direction==="undo"?"Undid":"Redid")+" edit to "+item.path,"success")
+}
 function setView(next){view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
-function renderView(){$("codepane").hidden=view!=="code";$("visual").hidden=!["map","encounters","data","sprites"].includes(view);$("changes").hidden=view!=="changes";if(view==="changes")renderChanges();if(["map","encounters","data","sprites"].includes(view))renderVisual(view,visualApi,$("visual")).catch(e=>info("Visual editor error: "+e.message,"error"));if(editorCM&&view==="code")setTimeout(()=>editorCM.refresh(),0)}
-const visualApi={current,paths:allPaths,open:openFile,loadRaw,changeFor,changeBytesFor,isCurrent:path=>currentPath===path,notify:info,setView};
+function renderView(){
+ $("codepane").hidden=view!=="code";
+ $("visual").hidden=!["map","trainers","encounters","data","sprites"].includes(view);
+ $("changes").hidden=view!=="changes";
+ if(view==="changes")renderChanges();
+ if(view==="map")mapStudio(visualApi,$("visual"),current()).catch(e=>info("Map Studio error: "+e.message,"error"));
+ else if(view==="trainers")trainerPage(visualApi,$("visual")).catch(e=>info("Trainer Studio error: "+e.message,"error"));
+ else if(["encounters","data","sprites"].includes(view))renderVisual(view,visualApi,$("visual")).catch(e=>info("Visual editor error: "+e.message,"error"));
+ if(editorCM&&view==="code")setTimeout(()=>editorCM.refresh(),0)
+}
+const visualApi={current,paths:allPaths,open:openFile,loadRaw,changeFor,changeBytesFor,
+ hasPath:path=>assetPaths.has(path),
+ assetUrl:path=>source==="remote"?"https://raw.githubusercontent.com/"+repo.repo+"/"+encodeURIComponent(repo.branch)+"/"+path.split("/").map(encodeURIComponent).join("/"):"",
+ isCurrent:path=>currentPath===path,notify:info,setView};
 function escapeDisplay(s){return String(s).slice(0,300)}
 function approxDiff(rec){if(rec.isBinary)return "Binary file: "+rec.originalBytes.length+" bytes → "+rec.bytes.length+" bytes. Download to compare byte-for-byte.";
  const before=rec.original.split("\n"),after=rec.value.split("\n");let start=0;while(start<before.length&&start<after.length&&before[start]===after[start])start++;
@@ -61,7 +99,7 @@ function makeButton(text,fn,klass="btn"){const b=document.createElement("button"
 function download(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)}
 function downloadCurrent(){const rec=current();if(!rec)return info("Open a file first","error");download(new Blob([rec.isBinary?rec.bytes:rec.value]),rec.path.split("/").at(-1));info("Downloaded "+rec.path,"success")}
 function exportAll(){const changes=modified();if(!changes.length)return info("No modified files to export","error");try{download(createZip(changes), "PokéStudio-edits.zip");info("Exported "+changes.length+" modified file(s) as a ZIP preserving their repository paths.","success")}catch(e){info("ZIP export failed: "+e.message,"error")}}
-async function connect(){const name=$("repo").value.trim(),branch=$("branch").value.trim();if(modified().length&&!confirm("Switch repository/branch? Export your pending changes first; drafts remain in browser storage."))return;const button=$("connect");button.disabled=true;button.textContent="Connecting…";try{repo.token=$("token").value.trim();await repo.connect(name,branch);source="remote";files.clear();directory="";currentPath=null;$("branch").value=repo.branch;$("repo-info").textContent=repo.repo;$("connection-status").innerHTML='<span class="dot connected"></span>Connected';renderTree();status();setEditorValue("");$("filename").textContent="No file selected";setView("code");info("Connected to "+repo.repo+" ("+repo.branch+") • "+repo.tree.length+" files"+(repo.truncated?" • GitHub truncated the tree; not all files are listed":"")+". Select a source file to begin.","success");}catch(e){info("Connection failed: "+e.message,"error")}finally{button.disabled=false;button.textContent="Connect"}}
+async function connect(){const name=$("repo").value.trim(),branch=$("branch").value.trim();if(modified().length&&!confirm("Switch repository/branch? Export your pending changes first; drafts remain in browser storage."))return;const button=$("connect");button.disabled=true;button.textContent="Connecting…";try{repo.token=$("token").value.trim();await repo.connect(name,branch);source="remote";files.clear();history.clear();assetPaths=new Set(repo.tree.map(t=>t.path));directory="";currentPath=null;$("branch").value=repo.branch;$("repo-info").textContent=repo.repo;$("connection-status").innerHTML='<span class="dot connected"></span>Connected';renderTree();status();setEditorValue("");$("filename").textContent="No file selected";setView("code");info("Connected to "+repo.repo+" ("+repo.branch+") • "+repo.tree.length+" files"+(repo.truncated?" • GitHub truncated the tree; not all files are listed":"")+". Select a source file to begin.","success");}catch(e){info("Connection failed: "+e.message,"error")}finally{button.disabled=false;button.textContent="Connect"}}
 async function buildROM(){
  if(source!=="remote")return info("Connect to a GitHub repository to run its ROM build.","error");
  if(modified().length&&!confirm("There are uncommitted local edits. GitHub will build only the files currently on the remote branch. Continue?"))return;
@@ -72,16 +110,16 @@ async function buildROM(){
 }
 function showCommit(){const changes=modified();if(!changes.length)return info("No changes to commit","error");if(source!=="remote")return info("Local projects can be exported, but not committed. Connect to a GitHub repository.","error");if(!repo.token){$("options-dialog").showModal();return info("Set your GitHub write token in Workspace settings, then try Commit again.","error")}const list=$("commit-files");list.replaceChildren();for(const file of changes){const line=document.createElement("div");line.textContent="● "+file.path;list.append(line)}$("commit-dialog").showModal()}
 async function doCommit(){const changes=modified(),message=$("commit-message").value.trim();if(!message)return info("Enter a commit message.","error");for(const f of changes){if(f.path.endsWith(".json")&&!f.isBinary){try{JSON.parse(f.value)}catch(err){return info("Invalid JSON in "+f.path+": "+err.message,"error")}}}
- const b=$("confirm-commit");b.disabled=true;b.textContent="Committing…";try{const hash=await repo.commit(changes,message);for(const f of changes){const r=files.get(f.path);if(r.isBinary)r.originalBytes=r.bytes.slice();else r.original=r.value;await deleteDraft(f.path)}$("commit-dialog").close();await repo.refresh();for(const [path,r] of files){const item=repo.lookup(path);if(item)r.sha=item.sha}renderTree();status();info("Committed "+changes.length+" file(s) to "+repo.branch+" ("+hash.slice(0,9)+")","success");}catch(e){info("Commit was not completed: "+e.message,"error")}finally{b.disabled=false;b.textContent="Commit changes"}}
-async function localFiles(event){const list=Array.from(event.target.files||[]);if(modified().length&&!confirm("Opening another workspace may hide your current edits. Export them first?"))return;files.clear();const first=list[0]?.webkitRelativePath.split("/")[0]||"";let loaded=0;for(const file of list){const path=file.webkitRelativePath?.replace(new RegExp("^"+first.replace(/[.*+?^\u0024{}()|[\]\\]/g,"\\$&")+"/"),"")||file.name;if(!textPath(path)&&!binaryPath(path))continue;if(file.size>15_000_000)continue;const isBinary=binaryPath(path)&&!textPath(path),r={path,sha:"local",isBinary};if(isBinary){r.bytes=new Uint8Array(await file.arrayBuffer());r.originalBytes=r.bytes.slice()}else{r.value=await file.text();r.original=r.value}files.set(path,r);loaded++}source="local";directory="";currentPath=null;setEditorValue("");$("filename").textContent="No file selected";renderTree();status();info("Opened "+loaded+" local files. Use Export edits to save changes; the browser cannot write directly back to arbitrary folders.","success")}
+ const b=$("confirm-commit");b.disabled=true;b.textContent="Committing…";try{const hash=await repo.commit(changes,message);for(const f of changes){const r=files.get(f.path);if(r.isBinary)r.originalBytes=r.bytes.slice();else r.original=r.value;await deleteDraft(f.path)}$("commit-dialog").close();await repo.refresh();history.clear();assetPaths=new Set(repo.tree.map(t=>t.path));for(const [path,r] of files){const item=repo.lookup(path);if(item)r.sha=item.sha}renderTree();status();info("Committed "+changes.length+" file(s) to "+repo.branch+" ("+hash.slice(0,9)+")","success");}catch(e){info("Commit was not completed: "+e.message,"error")}finally{b.disabled=false;b.textContent="Commit changes"}}
+async function localFiles(event){const list=Array.from(event.target.files||[]);if(modified().length&&!confirm("Opening another workspace may hide your current edits. Export them first?"))return;files.clear();const first=list[0]?.webkitRelativePath.split("/")[0]||"";let loaded=0;for(const file of list){const path=file.webkitRelativePath?.replace(new RegExp("^"+first.replace(/[.*+?^\u0024{}()|[\]\\]/g,"\\$&")+"/"),"")||file.name;if(!textPath(path)&&!binaryPath(path))continue;if(file.size>15_000_000)continue;const isBinary=binaryPath(path)&&!textPath(path),r={path,sha:"local",isBinary};if(isBinary){r.bytes=new Uint8Array(await file.arrayBuffer());r.originalBytes=r.bytes.slice()}else{r.value=await file.text();r.original=r.value}files.set(path,r);loaded++}source="local";history.clear();assetPaths=new Set(files.keys());directory="";currentPath=null;setEditorValue("");$("filename").textContent="No file selected";renderTree();status();info("Opened "+loaded+" local files. Use Export edits to save changes; the browser cannot write directly back to arbitrary folders.","success")}
 function showQuick(filter=""){const dialog=$("quick-dialog");if(!dialog.open)dialog.showModal();$("quick-search").value=filter;quickResults();$("quick-search").focus()}
 function quickResults(){const query=$("quick-search").value.toLowerCase().trim(),list=$("quick-results");list.replaceChildren();const matched=visiblePaths().filter(p=>p.toLowerCase().includes(query)).slice(0,90);for(const path of matched){const b=pathButton(path,path);b.onclick=()=>{dialogClose("quick-dialog");openFile(path)};list.append(b)}}
 function dialogClose(id){const d=$(id);if(d.open)d.close()}
 function findSelect(replace=false){const target=$("find-text").value;if(!target)return;const value=editorValue();let start=0;if(editorCM){const p=editorCM.getCursor("to");start=editorCM.indexFromPos(p)}else start=$("editor").selectionEnd;let idx=value.toLowerCase().indexOf(target.toLowerCase(),start);if(idx<0)idx=value.toLowerCase().indexOf(target.toLowerCase());if(idx<0){info("No match for "+target);return}
  if(editorCM){const a=editorCM.posFromIndex(idx),b=editorCM.posFromIndex(idx+target.length);editorCM.focus();editorCM.setSelection(a,b);if(replace)editorCM.replaceSelection($("replace-text").value)}else{const area=$("editor");area.focus();area.setSelectionRange(idx,idx+target.length);if(replace){area.setRangeText($("replace-text").value,idx,idx+target.length,"end");changeFor(currentPath,area.value)}}updatePosition()}
 function replaceAll(){if(!current()||current().isBinary)return;const query=$("find-text").value;if(!query)return;const value=editorValue().split(query).join($("replace-text").value);changeFor(currentPath,value);setEditorValue(value);info("Replaced all exact-case occurrences of "+query,"success")}
-function initEditor(){const textarea=$("editor");if(window.CodeMirror){editorCM=window.CodeMirror.fromTextArea(textarea,{lineNumbers:true,indentUnit:4,tabSize:4,lineWrapping:false,styleActiveLine:true,extraKeys:{"Ctrl-S":downloadCurrent,"Cmd-S":downloadCurrent}});editorCM.on("change",()=>{if(!loadingEditor&&current()&&!current().isBinary)changeFor(currentPath,editorCM.getValue());updatePosition()});editorCM.on("cursorActivity",updatePosition)}
- else{textarea.addEventListener("input",()=>{if(!loadingEditor&&current()&&!current().isBinary)changeFor(currentPath,textarea.value);updatePosition()});textarea.addEventListener("keydown",e=>{if(e.key==="Tab"){e.preventDefault();textarea.setRangeText("    ",textarea.selectionStart,textarea.selectionEnd,"end");if(current()&&!current().isBinary)changeFor(currentPath,textarea.value)}});textarea.addEventListener("click",updatePosition)}
+function initEditor(){const textarea=$("editor");if(window.CodeMirror){editorCM=window.CodeMirror.fromTextArea(textarea,{lineNumbers:true,indentUnit:4,tabSize:4,lineWrapping:false,styleActiveLine:true,extraKeys:{"Ctrl-S":downloadCurrent,"Cmd-S":downloadCurrent}});editorCM.on("change",()=>{if(!loadingEditor&&current()&&!current().isBinary)changeFor(currentPath,editorCM.getValue(),{typing:true});updatePosition()});editorCM.on("cursorActivity",updatePosition)}
+ else{textarea.addEventListener("input",()=>{if(!loadingEditor&&current()&&!current().isBinary)changeFor(currentPath,textarea.value,{typing:true});updatePosition()});textarea.addEventListener("keydown",e=>{if(e.key==="Tab"){e.preventDefault();textarea.setRangeText("    ",textarea.selectionStart,textarea.selectionEnd,"end");if(current()&&!current().isBinary)changeFor(currentPath,textarea.value,{typing:true})}});textarea.addEventListener("click",updatePosition)}
 }
 let dbPromise=null;
 function db(){if(!("indexedDB" in window))return Promise.resolve(null);if(!dbPromise)dbPromise=new Promise(resolve=>{try{const q=indexedDB.open("PokéStudioDrafts",1);q.onupgradeneeded=()=>q.result.createObjectStore("drafts");q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null)}catch{resolve(null)}});return dbPromise}
@@ -92,15 +130,16 @@ async function writeDraft(path,rec){if(!isDirty(rec))return deleteDraft(path);aw
 async function deleteDraft(path){await draftOperation(path,"delete")}
 function eventWiring(){
  $("build-btn").onclick=buildROM;
+ $("undo-btn").onclick=()=>applyHistory("undo");$("redo-btn").onclick=()=>applyHistory("redo");
  $("connect").onclick=connect;$("refresh").onclick=async()=>{if(modified().length)return info("Export or commit edits before refreshing.","error");try{files.clear();await repo.refresh();renderTree();info("Repository tree refreshed","success")}catch(e){info(e.message,"error")}};
  $("search").oninput=renderTree;$("open-local").onclick=()=>$("folder").click();$("folder").onchange=localFiles;$("export-all").onclick=exportAll;$("save-file").onclick=downloadCurrent;$("review-btn").onclick=()=>setView("changes");$("commit-btn").onclick=showCommit;$("confirm-commit").onclick=doCommit;
  $("more-menu").onclick=()=>$("options-dialog").showModal();$("token").oninput=e=>{repo.token=e.target.value.trim()};$("clear-token").onclick=()=>{repo.token="";$("token").value="";info("GitHub token cleared from this browser tab.","success")};$("font-size").oninput=e=>{if(editorCM)editorCM.getWrapperElement().style.fontSize=e.target.value+"px";else $("editor").style.fontSize=e.target.value+"px"};
  document.querySelectorAll(".close-dialog").forEach(b=>b.onclick=()=>b.closest("dialog").close());document.querySelectorAll("#tabs [data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
- document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>{const path=b.dataset.quick;if(path.endsWith("/"))navigate(path.slice(0,-1));else openFile(path)});
+ document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>{const path=b.dataset.quick;if(b.dataset.viewTarget){setView(b.dataset.viewTarget);return}if(path.endsWith("/"))navigate(path.slice(0,-1));else openFile(path)});
  $("toggle-sidebar").onclick=()=>$("sidebar").classList.toggle("visible");$("file-search").onclick=()=>{setView("code");$("search-line").hidden=false;$("find-text").focus()};$("close-search").onclick=()=>$("search-line").hidden=true;
  $("find-next").onclick=()=>findSelect(false);$("replace-one").onclick=()=>findSelect(true);$("replace-all").onclick=replaceAll;
  $("quick-search").oninput=quickResults;
- window.addEventListener("keydown",e=>{if(!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==="s"){e.preventDefault();downloadCurrent()}else if(e.key.toLowerCase()==="p"){e.preventDefault();showQuick()}else if(e.key.toLowerCase()==="f"&&!$("quick-dialog").open){e.preventDefault();setView("code");$("search-line").hidden=false;$("find-text").focus()}});
+ window.addEventListener("keydown",e=>{if(!(e.ctrlKey||e.metaKey))return;const key=e.key.toLowerCase();if(key==="z"||key==="y"){e.preventDefault();e.stopImmediatePropagation();applyHistory(key==="y"||e.shiftKey?"redo":"undo");return}if(e.key.toLowerCase()==="s"){e.preventDefault();downloadCurrent()}else if(e.key.toLowerCase()==="p"){e.preventDefault();showQuick()}else if(e.key.toLowerCase()==="f"&&!$("quick-dialog").open){e.preventDefault();setView("code");$("search-line").hidden=false;$("find-text").focus()}},true);
  window.addEventListener("beforeunload",e=>{if(modified().length){e.preventDefault();e.returnValue=""}});
 }
 initEditor();eventWiring();renderTree();status();if(window.location.protocol==="https:"||window.location.hostname==="localhost"){connect()}else info("For GitHub API requests, open this app on GitHub Pages or a local HTTP server.");
