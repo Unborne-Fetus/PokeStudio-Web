@@ -72,7 +72,7 @@ export async function renderMap(api,root,rec){
   right.replaceChildren(el("h3","","Event properties"));const key=modeSelect.value,events=group();
   const actions=el("div","panel-actions");
   actions.append(btn("+ Add event",()=>{
-   const ev=key==="object_events"?{graphics_id:"OBJ_EVENT_GFX_YOUNGSTER",x:0,y:0,elevation:3,movement_type:"MOVEMENT_TYPE_FACE_DOWN",movement_range_x:0,movement_range_y:0,trainer_type:"TRAINER_TYPE_NONE",trainer_sight_or_berry_tree_id:"0",script:"0x0",flag:"0"}:key==="warp_events"?{x:0,y:0,elevation:0,dest_map:"MAP_LITTLEROOT_TOWN",dest_warp_id:"0"}:key==="coord_events"?{type:"trigger",x:0,y:0,elevation:0,var:"VAR_TEMP_0",var_value:"0",script:"0x0"}:{type:"sign",x:0,y:0,elevation:0,player_facing_dir:"DIR_NORTH",script:"0x0"};
+   const ev=key==="object_events"?{graphics_id:"OBJ_EVENT_GFX_YOUNGSTER",x:0,y:0,elevation:3,movement_type:"MOVEMENT_TYPE_FACE_DOWN",movement_range_x:0,movement_range_y:0,trainer_type:"TRAINER_TYPE_NONE",trainer_sight_or_berry_tree_id:"0",script:"0x0",flag:"0"}:key==="warp_events"?{x:0,y:0,elevation:0,dest_map:"MAP_LITTLEROOT_TOWN",dest_warp_id:"0"}:key==="coord_events"?{type:"trigger",x:0,y:0,elevation:0,var:"VAR_TEMP_0",var_value:"0",script:"0x0"}:{type:"sign",x:0,y:0,elevation:0,player_facing_dir:"BG_EVENT_PLAYER_FACING_ANY",script:"0x0"};
    if(!map[key])map[key]=[];map[key].push(ev);selected=map[key].length-1;saveObject(api,initialPath,map);updateDetail();draw()
   }));
   if(selected>=0&&events[selected])actions.append(btn("Delete selected",()=>{if(!confirm("Remove selected event?"))return;events.splice(selected,1);selected=-1;saveObject(api,initialPath,map);updateDetail();draw()}));
