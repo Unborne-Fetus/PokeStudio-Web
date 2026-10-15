@@ -17,9 +17,14 @@ async function fetchTileset(api,kind,name){
  const [metatiles,art]=await Promise.all([api.loadRaw(path+"metatiles.bin"),api.loadRaw(path+"tiles.png")]);
  if(!metatiles.isBinary||!art.isBinary)throw Error("Tileset assets were not decoded as binary");
  if(metatiles.bytes.byteLength%24!==0)throw Error("Unexpected metatile entry size");
- const bitmap=await imageFromBytes(art.bytes);return {path,data:metatiles.bytes,bitmap,count:metatiles.bytes.length/24};
+ const bitmap=await imageFromBytes(art.bytes);
+ const overlay=document.createElement("canvas");overlay.width=bitmap.width;overlay.height=bitmap.height;
+ const cx=overlay.getContext("2d");cx.drawImage(bitmap,0,0);
+ const pixels=cx.getImageData(0,0,overlay.width,overlay.height),base=pixels.data.slice(0,4);
+ for(let i=0;i<pixels.data.length;i+=4)if(pixels.data[i]===base[0]&&pixels.data[i+1]===base[1]&&pixels.data[i+2]===base[2])pixels.data[i+3]=0;
+ cx.putImageData(pixels,0,0);return {path,data:metatiles.bytes,bitmap,overlay,count:metatiles.bytes.length/24};
 }
-function artTile(ctx,tileset,entry,tx,ty){
+function artTile(ctx,tileset,entry,tx,ty,layer){
  const tile=entry&0x03ff,flipX=Boolean(entry&0x0400),flipY=Boolean(entry&0x0800);
  const tileColumns=Math.floor(tileset.bitmap.width/8),tileRows=Math.floor(tileset.bitmap.height/8);
  if(tileColumns<1)return;let local=tile;
@@ -27,7 +32,7 @@ function artTile(ctx,tileset,entry,tx,ty){
  if(local<0||local>=tileColumns*tileRows)return;
  const sx=(local%tileColumns)*8,sy=Math.floor(local/tileColumns)*8;
  ctx.save();ctx.translate(tx+(flipX?8:0),ty+(flipY?8:0));ctx.scale(flipX?-1:1,flipY?-1:1);
- ctx.drawImage(tileset.bitmap,sx,sy,8,8,0,0,8,8);ctx.restore();
+ ctx.drawImage(layer?tileset.overlay:tileset.bitmap,sx,sy,8,8,0,0,8,8);ctx.restore();
 }
 export async function createMetatileRenderer(api,layout){
  const [primary,secondary]=await Promise.all([
@@ -44,7 +49,7 @@ export async function createMetatileRenderer(api,layout){
    const c=canvas.getContext("2d");if(!c)return false;
    const base=index*24;
    // Three tile layers, each holding a 2x2 grid.
-   for(let pass=0;pass<3;pass++)for(let q=0;q<4;q++){const value=v.getUint16(base+(pass*4+q)*2,true);if(value===0&&pass>0)continue;artTile(c,source,value,(q%2)*8,Math.floor(q/2)*8)}
+   for(let pass=0;pass<3;pass++)for(let q=0;q<4;q++){const value=v.getUint16(base+(pass*4+q)*2,true);if(value===0&&pass>0)continue;artTile(c,source,value,(q%2)*8,Math.floor(q/2)*8,pass)}
    cache.set(id,canvas)
   }
   ctx.drawImage(cache.get(id),x,y,size,size);return true
