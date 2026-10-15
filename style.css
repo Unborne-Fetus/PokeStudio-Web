@@ -227,3 +227,23 @@ input::placeholder{color:#a991a1}
  background:transparent;
 }
 .brisk-mon-portrait > .art-placeholder[hidden] {display:none}
+
+/* Pokémon Studio */
+.pokemon-workspace{min-height:0}
+.pokemon-section{margin:0 0 14px;padding:18px}
+.pokemon-section h3{margin-top:0}
+.pokemon-detail-header{margin-bottom:15px;padding:18px}
+.pokemon-detail-header h2{margin:0}
+.pokemon-field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;align-items:start}
+.pokemon-field-grid .autocomplete-wrap,.pokemon-move-row .autocomplete-wrap{min-width:0}
+.pokemon-move-section{padding:14px 0;border-top:1px solid var(--line)}
+.pokemon-move-section h3{margin:0 0 9px}
+.pokemon-move-section>.btn{margin:8px 0}
+.pokemon-move-list{display:grid;gap:8px;margin:10px 0}
+.pokemon-move-row{display:grid;grid-template-columns:minmax(70px,100px) minmax(170px,1fr) auto;align-items:end;gap:10px;padding:8px;background:var(--panel2);border-radius:9px}
+.pokemon-move-row:has(.autocomplete-field:first-child){grid-template-columns:minmax(180px,1fr) auto}
+.pokemon-move-row .form-field{margin:0}
+.pokemon-evo-row{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:10px 0;padding:12px;background:var(--panel2);border-radius:9px}
+.pokemon-evo-row .form-field{min-width:170px;flex:1}
+.pokemon-section details{margin-top:12px}.pokemon-section pre{overflow:auto;white-space:pre-wrap;max-height:350px}
+@media(max-width:720px){.pokemon-move-row{grid-template-columns:1fr}.pokemon-workspace{display:block}.pokemon-workspace>.trainer-browser{max-height:260px}}
