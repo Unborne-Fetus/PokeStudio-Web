@@ -161,18 +161,58 @@ input::placeholder{color:#a991a1}
 .spread-row input[type=number]{width:53px;min-width:0;text-align:center;padding:5px 2px}
 .spread-row small{color:#bda5b3;font-size:11px}
 
-/* Clean Brisk Dex corrected sprites with a restrained 2-second animation cycle. */
-.brisk-mon-portrait{isolation:isolate;overflow:hidden}
-.brisk-mon-portrait>.brisk-corrected-icon{
- position:relative;z-index:2;display:block;width:100%;height:100%;
- object-fit:contain;image-rendering:pixelated;
- animation:brisk-icon-bob 2s ease-in-out infinite;
- transform-origin:50% 85%;will-change:transform
+/* Brisk Dex 32×64 indexed icons: a 32×32 crop window, NOT a scaled sheet. */
+.brisk-mon-portrait{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 60%,#654657 0%,#392637 75%,#291a29 100%);
 }
-.brisk-mon-portrait>.brisk-corrected-icon:only-of-type{background:transparent}
-@keyframes brisk-icon-bob{
- 0%,15%,35%,100%{transform:translateY(0) scale(1)}
- 22%{transform:translateY(-6px) scale(1.035)}
- 29%{transform:translateY(-2px) scale(.985)}
+.brisk-mon-portrait > .brisk-icon-window{
+  position:absolute;
+  inset:0;
+  display:block;
+  overflow:hidden;
+  border-radius:inherit;
 }
-@media(prefers-reduced-motion:reduce){.brisk-mon-portrait>.brisk-corrected-icon{animation:none}}
+.brisk-icon-placeholder{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:#cba8b8;
+  font-weight:700;
+  font-size:13px;
+}
+.brisk-icon-window.brisk-icon-loaded > .brisk-icon-placeholder{display:none}
+.brisk-icon-window > .brisk-icon-sheet{
+  position:absolute;
+  display:block;
+  top:0;
+  left:0;
+  width:100%;
+  height:auto;
+  max-width:none;
+  max-height:none;
+  image-rendering:pixelated;
+  object-fit:fill;
+  visibility:hidden;
+  pointer-events:none;
+}
+.brisk-icon-window.brisk-icon-loaded > .brisk-icon-sheet{visibility:visible}
+.brisk-icon-window.brisk-icon-two-frame > .brisk-icon-sheet{
+  animation:brisk-icon-frames 2s steps(1,end) infinite;
+}
+.brisk-icon-window.brisk-icon-single-frame > .brisk-icon-sheet{
+  height:100%;
+  object-fit:contain;
+  animation:none;
+}
+/* One authentic frame flip per 2s; no whole-sprite bouncing, no overlap. */
+@keyframes brisk-icon-frames{
+  0%,44.99%,65%,100%{transform:translateY(0)}
+  45%,64.99%{transform:translateY(-50%)}
+}
+@media(prefers-reduced-motion:reduce){
+  .brisk-icon-window.brisk-icon-two-frame > .brisk-icon-sheet{animation:none}
+}
