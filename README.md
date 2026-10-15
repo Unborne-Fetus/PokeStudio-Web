@@ -12,13 +12,13 @@ The editor works with a source repository, not a compiled GBA ROM. Open it on de
 | --- | --- |
 | Project browsing | Connect to any public GitHub repo and branch, recursively browse folders, filename filter, quick open (Ctrl/Cmd + P), and load individual text/binary files |
 | Code | CodeMirror code editor (with built-in textarea fallback), line numbers, common syntax modes, find/replace, shortcuts and downloads |
-| Maps & events | Parse `data/maps/*/map.json`, edit map metadata, add/delete/drag object events, warps, coordinate and background events, and edit event properties |
-| Map layouts | Read `data/layouts/layouts.json` and 16-bit `map.bin` layouts, display metatile IDs, paint IDs while preserving existing upper collision/elevation flags, and preview available tileset PNG artwork experimentally |
+| Maps & events | Three separate map modes — Appearance (paint/pick metatiles), Collision (paint collision and elevation), Events (add/edit/drag NPCs, warps, triggers and signs) — plus map metadata and connections |
+| Map layouts | Read `data/layouts/layouts.json` and binary `map.bin`; recolor indexed tileset art using the project’s JASC `.pal` files; preserve collision/elevation bitfields while painting appearance |
 | Wild encounters | Parse `src/data/wild_encounters.json`, find maps and edit encounter rates, species and per-slot level ranges without changing existing slot counts |
-| Trainers | Find and edit individual `=== TRAINER_... ===` blocks in `src/data/trainers.party`, preserving the rest of the file |
+| Trainers | Dedicated visual Trainer Studio with trainer portraits, searchable roster, 6-slot Pokémon cards, sprites, team settings, moves, abilities, items, levels, IVs/EVs, party add/remove/reorder and careful source edits |
 | Data | Inspect and edit primitives in nested JSON (unknown keys retained) |
 | Sprites & graphics | Preview PNG and other common image assets, zoom nearest-neighbor, stage replacement graphics |
-| Recovery | Store compatible unsaved browser drafts in IndexedDB; no access token is stored |
+| Recovery | Store compatible unsaved browser drafts in IndexedDB; no access token is stored. Workspace-level undo/redo tracks source, trainer, JSON and binary map edits (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z) |
 | Save | Review changed files, export individually or in a ZIP preserving paths, commit multiple files via GitHub's Git Data API, detect diverged branches |
 | Build | Trigger a recognized ROM-building GitHub Actions workflow (only if the connected project provides one with `workflow_dispatch`) |
 
@@ -28,7 +28,7 @@ The project is currently an **experimental alpha**, not a feature-complete Porym
 
 1. Visit the site and connect to `Unborne-Fetus/Pokemon-Brisk-Emerald` (or another pokeemerald-expansion source repository). Leave the branch field blank to load the repository's default branch.
 2. Browse the Explorer, click a file, or use the right-hand quick links.
-3. Open a map's `map.json` and choose **Map & events** to work with events. Open `src/data/wild_encounters.json` and choose **Encounters** to edit routes. Open `src/data/trainers.party` and choose **JSON inspector** to work with trainer blocks.
+3. Open a map's `map.json` and choose **Map & events** to work with events. Open `src/data/wild_encounters.json` and choose **Encounters** to edit routes. Use the **Trainers** tab for visual roster and team editing; it loads `src/data/trainers.party` automatically.
 4. Changes are staged **locally**, never pushed automatically. Click **Review changes** to inspect, **Export edits** to download an archive, or **Commit to GitHub** to save to the remote branch.
 
 ### GitHub write authentication
@@ -49,10 +49,10 @@ The Brisk Emerald project currently contains the workflow `.github/workflows/bui
 
 ## Current limitations
 
-- Map artwork preview is experimental: exact palettes, layer behavior, tile animations and metatile behaviors are not fully reproduced. Colored metatile-ID fallback remains available if art cannot load.
+- The map artwork renderer now applies the connected project’s JASC palettes to tileset PNGs. It is still experimental: layer behavior, tile animations and metatile behaviors are not fully reproduced. Colored metatile-ID fallback remains available if art cannot load.
 - Map painting currently updates binary IDs; it does **not** provide Porymap's full metatile/palette authoring, border tools, connections editor, or collision-property interface.
 - The map event inspector supports fields already present in map JSON and basic event templates, but does not graphically author custom event scripts.
-- Trainer editing works on trainer blocks, not a full roster/team-builder UI.
+- Trainer Studio has a source-aware roster and a visual team builder, but it does not validate every custom ability, move, item, form or trainerproc rule. Changes should be checked with a ROM build.
 - The encounter editor intentionally does **not** auto-rebalance slot weights; check the project's config when adding/removing slots.
 - Sprites can be inspected/replaced, not pixel-painted; indexed Pokémon PNG palettes may require external validation.
 - No integrated compiler/emulator; compilation uses GitHub Actions.
@@ -74,3 +74,7 @@ To deploy this repository: GitHub **Settings → Pages → Source: GitHub Action
 ## Scope
 
 PokéStudio Web is intended to become a flexible pokeemerald-expansion IDE, not a special-purpose editor tied permanently to Brisk Emerald. File formats are preserved wherever possible; editing arbitrary expansion forks still requires checking their own source format differences. Contributions and bug reports are welcome.
+
+## Interface theme
+
+PokéStudio uses a warm **aubergine, copper, and terracotta** color scheme instead of the blue or green palettes used in our other tools. The three map editor submodes share this theme while keeping tile artwork in its actual game colors.
