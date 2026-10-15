@@ -15,6 +15,7 @@ The editor works with a source repository, not a compiled GBA ROM. Open it on de
 | Maps & events | Three separate map modes — Appearance (paint/pick metatiles), Collision (paint collision and elevation), Events (add/edit/drag NPCs, warps, triggers and signs) — plus map metadata and connections |
 | Map layouts | Read `data/layouts/layouts.json` and binary `map.bin`; recolor indexed tileset art using the project’s JASC `.pal` files; preserve collision/elevation bitfields while painting appearance |
 | Wild encounters | Parse `src/data/wild_encounters.json`, find maps and edit encounter rates, species and per-slot level ranges without changing existing slot counts |
+| Pokémon | Search species and forms; visually edit source-backed base stats, types, abilities, growth, breeding, simple evolutions, level-up and egg moves across linked C files. Unsupported expressions are preserved and exposed in Code mode. |
 | Trainers | Dedicated visual Trainer Studio with trainer portraits, searchable roster, 6-slot Pokémon cards, sprites, team settings, moves, abilities, items, levels, IVs/EVs, party add/remove/reorder and careful source edits |
 | Data | Inspect and edit primitives in nested JSON (unknown keys retained) |
 | Sprites & graphics | Preview PNG and other common image assets, zoom nearest-neighbor, stage replacement graphics |
@@ -28,7 +29,7 @@ The project is currently an **experimental alpha**, not a feature-complete Porym
 
 1. Visit the site and connect to `Unborne-Fetus/Pokemon-Brisk-Emerald` (or another pokeemerald-expansion source repository). Leave the branch field blank to load the repository's default branch.
 2. Browse the Explorer, click a file, or use the right-hand quick links.
-3. Open a map's `map.json` and choose **Map & events** to work with events. Open `src/data/wild_encounters.json` and choose **Encounters** to edit routes. Use the **Trainers** tab for visual roster and team editing; it loads `src/data/trainers.party` automatically.
+3. Open a map's `map.json` and choose **Map & events** to work with events. Open `src/data/wild_encounters.json` and choose **Encounters** to edit routes. Use the **Pokémon** tab to edit species, linked level-up/egg move lists, and simple evolutions. Use the **Trainers** tab for visual roster and team editing; it loads `src/data/trainers.party` automatically.
 4. Changes are staged **locally**, never pushed automatically. Click **Review changes** to inspect, **Export edits** to download an archive, or **Commit to GitHub** to save to the remote branch.
 
 ### GitHub write authentication
