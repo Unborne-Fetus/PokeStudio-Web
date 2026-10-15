@@ -1,3 +1,4 @@
+import {createSpreadEditor} from "./spread-editor.js";
 import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
 import {STAT_NAMES,readSpread,applySpread,spreadTotal,spreadText,spreadIsValid} from "./stat-spreads.js";
@@ -150,6 +151,7 @@ export async function trainerPage(api,root){
    }
   }
   editPanel.append(form);
+  for(const kind of ["IVs","EVs"])editPanel.append(createSpreadEditor(kind,pokemon.fields[kind],v=>editMonField(chosenMon,kind,v)));
   const moveTitle=dom("h3","","Moves (up to four)");editPanel.append(moveTitle);
   const moves=dom("div","moves-grid");
   for(let i=0;i<4;i++)moves.append(autocomplete("Move "+(i+1),pokemon.moves[i]||"",validMoves,v=>{
