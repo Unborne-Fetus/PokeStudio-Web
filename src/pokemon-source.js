@@ -95,3 +95,15 @@ export function editEggMoves(source,name,moves){
  const leading=found.body.match(/^\s*/)?.[0]||"\n",ending=found.body.match(/\s*$/)?.[0]||"\n";
  return replaceArrayBody(source,name,leading+moves.map(x=>"    "+x+",").join("\n")+(moves.length?"\n":"")+"    MOVE_UNAVAILABLE,"+ending);
 }
+
+
+export function setSpeciesField(source,id,key,value){
+ const found=speciesEntries(source).find(entry=>entry.id===id);
+ if(!found)throw Error("Species "+id+" was not found");
+ if(!/^[A-Za-z_]\w*$/.test(key)||!/^[A-Z_][A-Z_0-9]*$/.test(value))throw Error("Invalid setting");
+ if(readFields(found.body).has(key))return editSpeciesField(source,id,key,value);
+ const offset=found.end;
+ // Place the new field just before the species closing brace.
+ const indent=(source.slice(found.start,found.open).match(/\n([ \t]*)\[/)||[])[1]||"    ";
+ return source.slice(0,offset)+"    ."+key+" = "+value+",\n"+indent+source.slice(offset);
+}
