@@ -216,3 +216,14 @@ input::placeholder{color:#a991a1}
 @media(prefers-reduced-motion:reduce){
   .brisk-icon-window.brisk-icon-two-frame > .brisk-icon-sheet{animation:none}
 }
+
+/* Trainer Studio displays Brisk Dex FRONT BATTLE SPRITES, never icon spritesheets.
+   The GIF contains the original animation; CSS must not crop or translate frames. */
+.brisk-mon-portrait { display:grid;place-items:center;position:relative;overflow:hidden; }
+.brisk-mon-portrait > .brisk-front-sprite {
+ position:relative;display:block;z-index:3;width:100%;height:100%;
+ max-width:100%;max-height:100%;object-fit:contain;object-position:center;
+ image-rendering:pixelated;animation:none!important;transform:none!important;
+ background:transparent;
+}
+.brisk-mon-portrait > .art-placeholder[hidden] {display:none}
