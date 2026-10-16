@@ -15,7 +15,8 @@ test("Extracts the original GBA from the Actions ZIP with a verified checksum",a
  assert.deepEqual([...result.bytes],[...original]);
  assert.equal((await gbaFromFile("Brisk.gba",original)).bytes.length,2048);
  const damaged=new Uint8Array(archive);
- damaged[damaged.indexOf(0x42)]=0x43;
+ const filenameBytes=new DataView(damaged.buffer).getUint16(26,true);
+ damaged[30+filenameBytes+0xa0]^=0x01;
  await assert.rejects(gbaFromArtifactZip(damaged),/checksum|GBA header|not a ZIP/i);
 });
 test("Rejects invalid game files or unrelated ZIPs",async()=>{
