@@ -91,3 +91,7 @@ If the browser blocks the GitHub Actions ZIP download redirect, use **View build
 ## Alternate forms and custom Mega sprites
 
 PokéStudio's three Pokémon editors use the same form-aware renderer. It tries the ROM's canonical graphic paths even when GitHub's recursive file tree is truncated, displays only the first frame of stacked `anim_front.png` assets, and uses the ROM's `normal.pal`/`shiny.pal` when available. If no form-specific art can be loaded, the renderer explicitly falls back to the base National Dex sprite. Since this is browser rendering, network or palette failures may fall back to normal art rather than inventing a shiny.
+
+### Totem Pokémon visibility
+
+Pokémon Studio and Pokédex Studio intentionally exclude Totem forms from their species browsers (by `TOTEM` species identifier or `.isTotem = TRUE`), including search results and counts. The ROM source and Totem definitions are not modified or deleted; other alternate forms and custom Megas remain selectable.
