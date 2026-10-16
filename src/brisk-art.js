@@ -9,9 +9,13 @@ export function nationalDexIndex(header){
 }
 export function spriteId(species,index){
  const raw=String(species||"").replace(/^SPECIES_/,"").toUpperCase().replace(/[^A-Z0-9_ ]/g,"").replace(/[ -]/g,"_");
- const keys=[raw,raw.replace(/_(ALOLA|GALARIAN|GALAR|HISUI|PALDEA|MEGA|GMAX|ATTACK|DEFENSE|SPEED|ORIGIN|THERIAN|Z)($|_.*)/,"")];
- for(const key of keys){const found=index.get(key);if(found)return found}
- return null
+ // Brisk Dex sprite filenames use NATIONAL dex numbers, never SPECIES enum IDs.
+ // Find the longest actual National Dex species prefix (handles BLADE, MEGA_M,
+ // GALAR_STANDARD and future custom variants, without guessing their enum index).
+ if(index.has(raw))return index.get(raw);
+ const matching=[...index.keys()].filter(key=>raw.startsWith(key+"_"));
+ matching.sort((a,b)=>b.length-a.length);
+ return matching.length?index.get(matching[0]):null
 }
 export function briskSpriteUrls(id,shiny=false){
  if(!Number.isInteger(id)||id<1)return null;
