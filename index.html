@@ -3,7 +3,7 @@
 <meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — graphical and source-code editor for pokeemerald-expansion.">
 <title>PokéStudio Web · ROM hacking IDE</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.css">
-<link rel="stylesheet" href="style.css?rev=pokemon-shiny-2"></head>
+<link rel="stylesheet" href="style.css?rev=pokedex-studio-1"></head>
 <body>
 <header class="topbar">
   <a class="brand" href="./" aria-label="PokéStudio home"><span class="brand-icon">◆</span><strong>PokéStudio</strong><small>WEB</small></a>
@@ -25,7 +25,7 @@
     <nav id="tabs" aria-label="Editor modes">
       <button data-view="code" class="active">⌨ Code</button>
       <button data-view="map">▦ Maps</button>
-      <button data-view="trainers">♟ Trainers</button><button data-view="pokemon">◉ Pokémon</button><button data-view="encounters">◈ Encounters</button>
+      <button data-view="trainers">♟ Trainers</button><button data-view="pokemon">◉ Pokémon</button><button data-view="pokedex">▤ Pokédex</button><button data-view="encounters">◈ Encounters</button>
       <button data-view="data">⚙ JSON inspector</button><button data-view="sprites">▧ Sprites</button>
       <button data-view="changes">⇄ Changes</button>
     </nav>
@@ -40,7 +40,7 @@
   <aside id="inspector"><div class="side-title">WORKSPACE</div>
     <div class="inspector-section"><small>Project</small><strong id="repo-info">Not connected</strong><span id="branch-info" class="muted">Select a repository</span></div>
     <div class="inspector-section"><small>Open file</small><strong id="current-info">None</strong><span class="muted" id="file-info">—</span></div>
-    <div class="inspector-section"><small>Quick open</small><button class="quick" data-quick="data/maps/">🗺 Maps</button><button class="quick" data-quick="src/data/wild_encounters.json">🌿 Wild encounters</button><button class="quick" data-quick="src/data/trainers.party" data-view-target="trainers">⚔ Trainers</button><button class="quick" data-quick="src/data/pokemon/species_info/" data-view-target="pokemon">◉ Pokémon editor</button><button class="quick" data-quick="src/data/">📋 Species & items</button><button class="quick" data-quick="include/config/">⚙ Config</button></div>
+    <div class="inspector-section"><small>Quick open</small><button class="quick" data-quick="data/maps/">🗺 Maps</button><button class="quick" data-quick="src/data/wild_encounters.json">🌿 Wild encounters</button><button class="quick" data-quick="src/data/trainers.party" data-view-target="trainers">⚔ Trainers</button><button class="quick" data-quick="src/data/pokemon/species_info/" data-view-target="pokemon">◉ Pokémon editor</button><button class="quick" data-quick="src/data/pokemon/species_info/" data-view-target="pokedex">▤ Pokédex editor</button><button class="quick" data-quick="src/data/">📋 Species & items</button><button class="quick" data-quick="include/config/">⚙ Config</button></div>
     <div class="inspector-section"><small>Tips</small><p class="muted">Open a map.json for visual event editing. Open map.bin from a map layout for a metatile grid. Open wild_encounters.json for a searchable encounter table.</p></div>
   </aside>
 </div>
@@ -64,5 +64,5 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/javascript/javascript.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/python/python.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/yaml/yaml.min.js" defer></script>
-<script type="module" src="src/main.js?rev=pokemon-shiny-2"></script>
+<script type="module" src="src/main.js?rev=pokedex-studio-1"></script>
 </body></html>
