@@ -204,7 +204,7 @@ export async function pokedexPage(api,root){
     record.national=changed.get("natDexNum")?.value||record.national;
     record.num=dex.get(record.national.replace(/^NATIONAL_DEX_/,""))||0;
     api.notify("Staged Pokédex "+key+" change for "+record.name+". Review changes to commit.","success");
-    renderList();renderDetails();
+    renderList();return renderDetails().catch(err=>api.notify("Could not refresh Pokédex details: "+err.message,"error"));
    }catch(err){api.notify("Cannot change "+key+": "+err.message,"error")}
   }
   const basics=panel("Pokédex information","These fields affect the in-game Pokédex and read directly from this Pokémon's species header.");
@@ -260,7 +260,7 @@ export async function pokedexPage(api,root){
      api.changeFor(record.path,next);drafts.delete(chosen);
      record.description="COMPOUND_STRING";
      api.notify("Staged a unique Pokédex entry for "+record.name+".","success");
-     renderList();renderDetails();
+     renderList();return renderDetails().catch(err=>api.notify("Could not refresh Pokédex entry: "+err.message,"error"));
     }catch(err){api.notify("Unable to save entry: "+err.message,"error")}
    },"btn primary");
    actions.append(save);
@@ -276,7 +276,7 @@ export async function pokedexPage(api,root){
       const next=editSharedDexText(sourceFile.value,desc.symbol,box.value);
       api.changeFor(sharedPath,next);drafts.delete(chosen);
       api.notify("Staged updated shared Pokédex text for "+desc.symbol+".","success");
-      renderList();renderDetails();
+      renderList();await renderDetails();
      }catch(err){api.notify("Shared text edit failed: "+err.message,"error")}
     });
     actions.append(linked);
