@@ -72,3 +72,29 @@ test("ROM handoff rejects other origins and sends bytes but no GitHub token",asy
  await pending;
  assert.equal(listeners.has("message"),false);
 });
+
+test("Isolated emulator tabs can receive the ROM using same-origin BroadcastChannel",async()=>{
+ const channels=[];
+ class FakeChannel{
+  constructor(name){this.name=name;this.sent=[];channels.push(this)}
+  postMessage(message){this.sent.push(message)}
+  close(){this.closed=true}
+ }
+ const host={
+  location:{origin:"https://unborne-fetus.github.io",href:"https://unborne-fetus.github.io/PokeStudio-Web/"},
+  crypto:{randomUUID:()=>"c4d20b67-9c71-4b21-a0f3-78cd9174f500"},
+  BroadcastChannel:FakeChannel,
+  open:()=>({closed:true,postMessage(){throw Error("opener was isolated")}}),
+  addEventListener(){},removeEventListener(){},
+  setTimeout:()=>2,clearTimeout:()=>{}
+ };
+ const bridge=beginWebEmuHandoff(host);
+ assert.equal(bridge.isAvailable(),true);
+ const transfer=bridge.transfer({name:"Pokemon Brisk Emerald.gba",bytes:exampleGba()});
+ channels[0].onmessage({data:{type:"webemu:ready",nonce:"c4d20b67-9c71-4b21-a0f3-78cd9174f500"}});
+ assert.equal(channels[0].sent[0].type,"pokestudio:rom");
+ assert.equal(channels[0].sent[0].rom.byteLength,2048);
+ channels[0].onmessage({data:{type:"webemu:received",nonce:"c4d20b67-9c71-4b21-a0f3-78cd9174f500"}});
+ await transfer;
+ assert.equal(channels[0].closed,true);
+});
