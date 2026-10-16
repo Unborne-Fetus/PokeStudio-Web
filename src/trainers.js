@@ -4,7 +4,7 @@ import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
 import {STAT_NAMES,readSpread,applySpread,spreadTotal,spreadText,spreadIsValid} from "./stat-spreads.js";
 import {nationalDexIndex} from "./brisk-art.js";
-import {monIcon} from "./pokemon-art.js";
+import {monIcon} from "./pokemon-art.js?rev=form-canvas-5";
 import {isPlaceholderTrainer,pokemonChoiceLists} from "./autocomplete-data.js";
 import {DROPDOWN_FIELDS,trainerDropdownOptions,optionsWithCurrent} from "./trainer-options.js";
 import {catalog,mon,fields,changeMeta,changeField,editMon,addMon,removeMon,shiftMon,renameMon,setMoves,replaceTrainer,monAsset,picAsset} from "./trainer-data.js";
