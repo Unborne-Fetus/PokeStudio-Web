@@ -288,3 +288,44 @@ input::placeholder{color:#a991a1}
  .pokemon-variant-card .mon-portrait{width:75px;height:75px}
  .pokemon-detail-copy{min-width:0;width:100%}
 }
+
+/* Pokédex Studio — shares Pokémon art from pokemon-art.js with the other editors. */
+.pokedex-page{min-width:0}
+.dex-workspace{align-items:start;min-width:0}
+.dex-browser{min-height:0}
+.dex-list-item{min-height:57px}
+.dex-list-copy{flex:1;min-width:0;overflow:hidden}
+.dex-list-copy strong,.dex-list-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dex-unsaved{color:#e9b57d!important}
+.dex-hero{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:15px;padding:18px}
+.dex-hero-info{flex:1;min-width:190px;overflow-wrap:anywhere}
+.dex-hero-info h2{font-size:23px;margin:5px 0;color:#ffe1bd}
+.dex-hero-info p{margin:5px 0 12px}
+.dex-number{font:700 12px/1.4 ui-monospace,Consolas,monospace;letter-spacing:1px;color:#f1b47d}
+.dex-path{word-break:break-all}
+.dex-section{padding:18px;margin-bottom:14px}
+.dex-section h3{margin:0 0 7px;font-size:16px;color:#f5d8c0}
+.dex-section>.muted{margin:2px 0 15px}
+.dex-field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px 15px;align-items:start}
+.dex-form-field small,.dex-field-grid .autocomplete-field small{display:block;line-height:1.45;color:#bca5ac}
+.dex-entry-input{display:block;width:100%;min-height:170px;padding:13px;resize:vertical;font:13px/1.65 system-ui,sans-serif}
+.dex-entry-preview{border:1px solid #6c4a58;background:#211923;border-radius:12px;padding:16px 20px;margin:13px 0}
+.dex-entry-preview h4{margin:0 0 11px}
+.dex-entry-paragraph{font:14px/1.7 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:#f8e5d6;margin:0;min-height:78px}
+.dex-text-count{margin:8px 0}
+.dex-warnings:empty{display:none}
+.dex-warning{color:#ffd295;font-size:12px;margin:5px 0}
+.dex-entry-actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.dex-advanced{border:1px solid #5d3d4d;background:#332437;border-radius:9px;padding:12px;margin-top:12px}
+.dex-advanced>summary{cursor:pointer;color:#efd2ae;font-weight:600}
+.dex-advanced>.dex-field-grid{margin-top:14px}
+.dex-bottom-note{padding:12px 0}
+@media(max-width:760px){
+ .dex-workspace{grid-template-columns:1fr}
+ .dex-browser{position:static;max-height:310px}
+ .dex-browser .trainer-list{max-height:190px}
+ .dex-hero{padding:12px;gap:13px}
+ .dex-field-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+ .dex-entry-preview{padding:12px}
+ .dex-entry-actions .btn{white-space:normal}
+}
