@@ -3,7 +3,8 @@ import {createSpreadEditor} from "./spread-editor.js";
 import {autocomplete} from "./autocomplete.js";
 import {definitions,normalizeChoice} from "./game-legal.js";
 import {STAT_NAMES,readSpread,applySpread,spreadTotal,spreadText,spreadIsValid} from "./stat-spreads.js";
-import {nationalDexIndex,spriteId,briskSpriteUrls} from "./brisk-art.js";
+import {nationalDexIndex} from "./brisk-art.js";
+import {monIcon} from "./pokemon-art.js";
 import {isPlaceholderTrainer,pokemonChoiceLists} from "./autocomplete-data.js";
 import {DROPDOWN_FIELDS,trainerDropdownOptions,optionsWithCurrent} from "./trainer-options.js";
 import {catalog,mon,fields,changeMeta,changeField,editMon,addMon,removeMon,shiftMon,renameMon,setMoves,replaceTrainer,monAsset,picAsset} from "./trainer-data.js";
@@ -11,20 +12,6 @@ const dom=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.classNam
 const button=(text,callback,cls="btn")=>{const e=dom("button",cls,text);e.type="button";e.onclick=callback;return e};
 const prop=(title,value,fn,type="text")=>{const label=dom("label","form-field");label.append(dom("span","",title));const input=dom("input");input.type=type;input.value=String(value??"");input.onchange=()=>fn(type==="number"?Number(input.value):input.value);label.append(input);return label};
 function art(api,path,className,title){const outer=dom("div",className+" art-frame");const letter=dom("span","art-placeholder",(title||"?").slice(0,2).toUpperCase());outer.append(letter);if(api.hasPath(path)){const img=dom("img","pixel-art");img.alt=title;img.loading="lazy";img.src=api.assetUrl(path);img.onerror=()=>img.remove();outer.append(img)}return outer}
-function monIcon(api,species,shiny=false,dex=new Map(),speciesForms=null){
- const form=speciesForms?selectedSpecies(species,speciesForms):null;
- const exact=form?speciesForms.defined.get(form.form)?.id:null;
- const id=exact||spriteId(species,dex);
- const outer=dom("div","mon-portrait art-frame brisk-mon-portrait");
- const urls=briskSpriteUrls(id,shiny);
- const placeholder=dom("span","art-placeholder",String(species).slice(0,2).toUpperCase());outer.append(placeholder);
- if(!urls)return outer;
- const img=dom("img","brisk-front-sprite");img.alt=(shiny?"Shiny ":"")+species+" animated front battle sprite";
- img.loading="lazy";img.decoding="async";img.src=urls.animated;
- img.onerror=()=>{if(img.dataset.fallback)return img.remove();img.dataset.fallback="1";img.src=urls.still};
- img.onload=()=>{placeholder.hidden=true};
- outer.append(img);return outer
-}
 function portrait(api,pic){return art(api,"graphics/trainers/front_pics/"+picAsset(pic)+".png","trainer-portrait",pic)}
 const categories=["Name","Class","Pic","Gender","Music","AI","Items","Double Battle","Battle Type","Mugshot"];
 const monFields=["Level","Ability","Nature","Ball","Tera Type","Happiness","IVs","EVs","Shiny","Gigantamax","Dynamax Level"];
