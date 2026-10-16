@@ -1,7 +1,7 @@
 import {speciesEntries,readFields,editSpeciesField} from "./pokemon-source.js";
 import {nationalDexIndex} from "./brisk-art.js";
 import {speciesCatalog} from "./species-forms.js";
-import {monIcon} from "./pokemon-art.js";
+import {monIcon} from "./pokemon-art.js?rev=form-canvas-5";
 import {autocomplete} from "./autocomplete.js";
 import {decodeDexExpression,encodeSimpleString,parseSimpleString,dexEntryKind,editDexDescription,sharedDexEntry,editSharedDexText,entryWarnings} from "./pokedex-source.js";
 
