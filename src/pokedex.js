@@ -128,7 +128,7 @@ export async function pokedexPage(api,root){
   count.textContent=visible.length.toLocaleString()+" Pokémon / forms";
   list.replaceChildren();
   for(const record of visible.slice(0,limit)){
-   const row=button("",()=>{selected=record.id;renderList();renderDetails()},"trainer-list-item dex-list-item"+(selected===record.id?" active":""));
+   const row=button("",()=>{selected=record.id;renderList();return renderDetails()},"trainer-list-item dex-list-item"+(selected===record.id?" active":""));
    row.setAttribute("aria-label",pad(record.num)+" "+record.name);
    const art=monIcon(api,record.id,shiny,dex,forms);art.classList.add("pokemon-list-portrait");
    const copy=make("div","dex-list-copy");
@@ -312,5 +312,5 @@ export async function pokedexPage(api,root){
   detail.append(footer);
  }
  renderList();
- renderDetails();
+ await renderDetails();
 }
