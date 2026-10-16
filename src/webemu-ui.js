@@ -1,4 +1,5 @@
 import {findLatestBuild,downloadBuildRom,gbaFromFile,beginWebEmuHandoff} from "./rom-bridge.js";
+import {cachedBuild,rememberBuild,clearCachedBuild} from "./rom-cache.js";
 
 // Connected separately from the code editor to keep all ROM transfer states
 // isolated from source editing, undo, and GitHub write operations.
@@ -28,7 +29,13 @@ export function installWebEmu({repo,isRemote,modified,notify}){
    const {run,artifact}=await findLatestBuild(repo);
    $("webemu-actions-link").href="https://github.com/"+repo.repo+"/actions/runs/"+run.id;
    status("Found build #"+run.run_number+" ("+new Date(run.created_at).toLocaleString()+"). Downloading the GBA…");
-   const rom=await downloadBuildRom(repo,artifact);
+   let rom=await cachedBuild(repo,artifact);
+   if(rom){status("Using the saved copy of this build — no ROM download needed.");}
+   else{
+    rom=await downloadBuildRom(repo,artifact);
+    // Caching must never delay gameplay or stop a successful transfer.
+    void rememberBuild(repo,artifact,rom).catch(()=>{});
+   }
    status("Sending "+rom.name+" to the Web Emu tab…");
    await bridge.transfer(rom);
    dialog.close();
@@ -63,6 +70,10 @@ export function installWebEmu({repo,isRemote,modified,notify}){
    status("Could not open ROM: "+error.message,true);
    notify("Web Emu: "+error.message,"error");
   }
+ };
+ $("webemu-clear-cache").onclick=async()=>{
+  await clearCachedBuild(repo);
+  status("Cached ROM cleared. The next launch will download the latest successful build again.");
  };
  $("webemu-close").onclick=()=>$("webemu-dialog").close();
 }
