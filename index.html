@@ -3,14 +3,14 @@
 <meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — graphical and source-code editor for pokeemerald-expansion.">
 <title>PokéStudio Web · ROM hacking IDE</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.css">
-<link rel="stylesheet" href="style.css?rev=forms-art-3"></head>
+<link rel="stylesheet" href="style.css?rev=webemu-sprites-4"></head>
 <body>
 <header class="topbar">
   <a class="brand" href="./" aria-label="PokéStudio home"><span class="brand-icon">◆</span><strong>PokéStudio</strong><small>WEB</small></a>
   <span class="top-divider"></span>
   <div class="repo-controls"><label class="sr" for="repo">Repository</label><input id="repo" value="Unborne-Fetus/Pokemon-Brisk-Emerald" spellcheck="false" aria-label="Owner/repository"><input id="branch" value="" placeholder="default branch" aria-label="Branch"><button id="connect" class="btn primary">Connect</button></div>
   <div class="grow"></div><span id="dirty-counter" class="status-pill">0 changes</span>
-  <button id="undo-btn" class="btn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button><button id="redo-btn" class="btn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button><button id="build-btn" class="btn">⚡ Build ROM</button><button id="review-btn" class="btn">Review changes</button><button id="commit-btn" class="btn primary">Commit to GitHub</button>
+  <button id="undo-btn" class="btn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button><button id="redo-btn" class="btn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button><button id="build-btn" class="btn">⚡ Build ROM</button><button id="play-webemu" class="btn" title="Play the latest successful Brisk Emerald build in Web Emu">▶ Play in Web Emu</button><button id="review-btn" class="btn">Review changes</button><button id="commit-btn" class="btn primary">Commit to GitHub</button>
   <button id="more-menu" class="btn icon-btn" aria-label="Project options" title="Project options">☰</button>
 </header>
 <div id="workspace">
@@ -52,6 +52,16 @@
   <hr><label>Editor font size <input id="font-size" type="range" min="11" max="22" value="14"></label>
   <p class="muted">This editor does not need Ubuntu, VS Code, or a local build environment. GitHub Actions can compile ROMs separately.</p>
 </dialog>
+<dialog id="webemu-dialog" aria-labelledby="webemu-title">
+ <div class="dialog-head"><h2 id="webemu-title">Play Brisk Emerald in Web Emu</h2><button id="webemu-close" class="subtle" type="button" aria-label="Close">✕</button></div>
+ <p id="webemu-status" role="status" aria-live="polite">Finding the newest successful GBA build…</p>
+ <p class="muted">Only committed builds are playable. The ROM is sent directly to your Web Emu tab; your GitHub token is never shared.</p>
+ <div class="dialog-actions webemu-actions">
+  <button id="webemu-manual" class="btn" type="button">Choose GBA or artifact ZIP</button>
+  <a id="webemu-actions-link" class="btn" target="_blank" rel="noopener noreferrer" href="https://github.com/Unborne-Fetus/Pokemon-Brisk-Emerald/actions/workflows/build-brisk-emerald.yml">View build artifacts ↗</a>
+ </div>
+ <input id="webemu-file" type="file" accept=".gba,.zip" hidden>
+</dialog>
 <dialog id="commit-dialog"><div class="dialog-head"><h2>Commit your changes</h2><button class="close-dialog subtle">✕</button></div>
   <p class="muted">Commits all listed modified files to the selected branch. If it changed remotely, the commit is blocked until you reconnect and review.</p><div id="commit-files"></div>
   <label>Commit message <input id="commit-message" value="Edit project files in PokéStudio Web" maxlength="200"></label>
@@ -64,5 +74,5 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/javascript/javascript.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/python/python.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/yaml/yaml.min.js" defer></script>
-<script type="module" src="src/main.js?rev=forms-art-3"></script>
+<script type="module" src="src/main.js?rev=webemu-sprites-4"></script>
 </body></html>
