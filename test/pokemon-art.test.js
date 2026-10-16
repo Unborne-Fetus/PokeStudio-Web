@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {monIcon,romFrontArt,parseJascPalette,recolorPixels} from "../src/pokemon-art.js";
+import {monIcon,romFrontArt,parseJascPalette,recolorPixels,spriteFrameSize} from "../src/pokemon-art.js";
 import {briskSpriteUrls} from "../src/brisk-art.js";
 
 function mockDOM(){
@@ -94,4 +94,25 @@ test("JASC palettes recolor normal RGB pixels to shiny while preserving transpar
  const rgba=new Uint8ClampedArray([255,172,205,255,255,172,205,0]);
  assert.equal(recolorPixels(rgba,normal,shiny),true);
  assert.deepEqual([...rgba],[232,96,152,255,255,172,205,0]);
+});
+
+
+test("truncated GitHub tree still resolves form images by canonical raw URLs",()=>{
+ const api={hasPath:()=>false,assetUrl:path=>"https://raw.githubusercontent.com/test/main/"+path};
+ const dex=new Map([["AEGISLASH",681],["AMOONGUSS",591]]);
+ const blade=romFrontArt(api,"SPECIES_AEGISLASH_BLADE",dex);
+ const mega=romFrontArt(api,"SPECIES_AMOONGUSS_MEGA",dex);
+ assert.equal(blade.path,"graphics/pokemon/aegislash/blade/anim_front.png");
+ assert.equal(mega.path,"graphics/pokemon/custom_megas/amoonguss/mega/front_80.png");
+ const previous=globalThis.document;
+ globalThis.document=mockDOM();
+ try{
+  assert.equal(monIcon(api,"SPECIES_AEGISLASH_BLADE",false,dex).children[1].src,api.assetUrl(blade.path));
+  assert.equal(monIcon(api,"SPECIES_AMOONGUSS_MEGA",false,dex).children[1].src,api.assetUrl(mega.path));
+ }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous}
+});
+test("two-frame ROM animation sheets are cropped while 80x80 Megas stay intact",()=>{
+ assert.deepEqual(spriteFrameSize(64,128),{width:64,height:64});
+ assert.deepEqual(spriteFrameSize(80,160),{width:80,height:80});
+ assert.deepEqual(spriteFrameSize(80,80),{width:80,height:80});
 });
