@@ -23,6 +23,7 @@ The editor works with a source repository, not a compiled GBA ROM. Open it on de
 | Recovery | Store compatible unsaved browser drafts in IndexedDB; no access token is stored. Workspace-level undo/redo tracks source, trainer, JSON and binary map edits (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z) |
 | Save | Review changed files, export individually or in a ZIP preserving paths, commit multiple files via GitHub's Git Data API, detect diverged branches |
 | Build | Trigger a recognized ROM-building GitHub Actions workflow (only if the connected project provides one with `workflow_dispatch`) |
+| Play in Web Emu | Open Web Emu from PokéStudio, find the newest successful Brisk Emerald GBA build on the connected branch, download and unpack its GitHub Actions artifact, and securely transfer only the ROM bytes to Web Emu. If GitHub blocks browser ZIP redirects, choose the downloaded `.zip` or `.gba` manually. |
 
 The project is currently an **experimental alpha**, not a feature-complete Porymap or VS Code replacement.
 
@@ -80,3 +81,13 @@ PokéStudio Web is intended to become a flexible pokeemerald-expansion IDE, not 
 ## Interface theme
 
 PokéStudio uses a warm **aubergine, copper, and terracotta** color scheme instead of the blue or green palettes used in our other tools. The three map editor submodes share this theme while keeping tile artwork in its actual game colors.
+
+## Play the newest ROM in Web Emu
+
+After connecting to `Unborne-Fetus/Pokemon-Brisk-Emerald` and entering a fine-grained token with **Actions: read**, click **▶ Play in Web Emu**. PokéStudio looks for the latest successful, unexpired `Pokemon-Brisk-Emerald` artifact produced by `.github/workflows/build-brisk-emerald.yml` on your selected branch. It opens the separate Web Emu tab, extracts the `.gba` from the artifact ZIP, and transfers the bytes through a validated, same-origin browser message. **Your GitHub token is never sent to Web Emu**. The emulator does not receive uncommitted PokéStudio edits; build and commit before playing them.
+
+If the browser blocks the GitHub Actions ZIP download redirect, use **View build artifacts** to download the artifact from GitHub, then click **Choose GBA or artifact ZIP** in the PokéStudio dialog. It sends the chosen file to the already-open Web Emu tab. An older build is used only when it is the most recent *successful* run whose artifact is still available. Private branches without a successful build must be built first. Web Emu save data remains in its normal browser save storage.
+
+## Alternate forms and custom Mega sprites
+
+PokéStudio's three Pokémon editors use the same form-aware renderer. It tries the ROM's canonical graphic paths even when GitHub's recursive file tree is truncated, displays only the first frame of stacked `anim_front.png` assets, and uses the ROM's `normal.pal`/`shiny.pal` when available. If no form-specific art can be loaded, the renderer explicitly falls back to the base National Dex sprite. Since this is browser rendering, network or palette failures may fall back to normal art rather than inventing a shiny.
