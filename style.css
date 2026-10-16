@@ -329,3 +329,13 @@ input::placeholder{color:#a991a1}
  .dex-entry-preview{padding:12px}
  .dex-entry-actions .btn{white-space:normal}
 }
+
+/* One-click Web Emu ROM handoff status and fallback controls. */
+#play-webemu{border-color:#ad7854;color:#ffe3c0;font-weight:650}
+#play-webemu:hover{background:#60343c}
+#webemu-dialog{width:min(590px,94vw)}
+#webemu-status{line-height:1.6;padding:12px;background:#392634;border:1px solid #705061;border-radius:9px;overflow-wrap:anywhere}
+#webemu-status.error{color:#ffced7;border-color:#a25460;background:#482631}
+.webemu-actions{justify-content:flex-start;flex-wrap:wrap}
+.webemu-actions .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:normal;text-align:center}
+@media(max-width:760px){#play-webemu{font-size:11px;padding:6px 9px}.webemu-actions>*{flex:1 0 auto}}
