@@ -40,13 +40,16 @@ test("Prefers a recent successful build with a nonexpired ROM artifact",async()=
   async request(query){
    queries.push(query);
    if(query.includes("/runs?"))return {workflow_runs:runs};
+   if(query.includes("/actions/artifacts?"))return {artifacts};
    if(query.includes("/runs/6/"))return {artifacts:[artifacts[1]]};
    if(query.includes("/runs/5/"))return {artifacts:[artifacts[0]]};
    throw Error("Unexpected request "+query);
   }
  };
  assert.equal((await findLatestBuild(repo)).run.id,5);
- assert.equal(queries.length,3);
+ // Runs and matching artifacts should start in parallel, not serially.
+ assert.equal(queries.length,2);
+ assert.ok(queries.some(q=>q.includes("/actions/artifacts?")));
 });
 test("ROM handoff rejects other origins and sends bytes but no GitHub token",async()=>{
  const listeners=new Map(),out=[];
@@ -97,4 +100,20 @@ test("Isolated emulator tabs can receive the ROM using same-origin BroadcastChan
  channels[0].onmessage({data:{type:"webemu:received",nonce:"c4d20b67-9c71-4b21-a0f3-78cd9174f500"}});
  await transfer;
  assert.equal(channels[0].closed,true);
+});
+
+test("Falls back to run-specific artifact queries if repository artifacts omit workflow metadata",async()=>{
+ const calls=[],workspace={
+  repo:"Unborne-Fetus/Pokemon-Brisk-Emerald",branch:"master",token:"read-token",
+  async request(path){
+   calls.push(path);
+   if(path.includes("/runs?"))return {workflow_runs:[{id:42,conclusion:"success",head_branch:"master"}]};
+   if(path.includes("/actions/artifacts?"))return {artifacts:[{id:100,name:"Pokemon-Brisk-Emerald",expired:false}]};
+   if(path.includes("/runs/42/"))return {artifacts:[{id:100,name:"Pokemon-Brisk-Emerald",expired:false}]};
+   throw Error("Unexpected path "+path);
+  }
+ };
+ const build=await findLatestBuild(workspace);
+ assert.equal(build.artifact.id,100);
+ assert.equal(calls.length,3);
 });
