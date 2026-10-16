@@ -247,3 +247,44 @@ input::placeholder{color:#a991a1}
 .pokemon-evo-row .form-field{min-width:170px;flex:1}
 .pokemon-section details{margin-top:12px}.pokemon-section pre{overflow:auto;white-space:pre-wrap;max-height:350px}
 @media(max-width:720px){.pokemon-move-row{grid-template-columns:1fr}.pokemon-workspace{display:block}.pokemon-workspace>.trainer-browser{max-height:260px}}
+
+/* Pokémon Studio art: same Brisk Dex front sprites as Trainer Studio. */
+.pokemon-shiny-switch{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+ padding:4px;background:#22151f;border:1px solid var(--line);border-radius:10px;
+}
+.pokemon-shiny-option{
+ background:transparent;border:1px solid transparent;border-radius:7px;
+ color:#d7b9c7;padding:7px 6px;font-weight:600;min-width:0;
+}
+.pokemon-shiny-option:hover{background:#493044;color:#fff}
+.pokemon-shiny-option.selected{background:#734453;border-color:#b77b70;color:#fff3e8}
+.pokemon-list-portrait.mon-portrait{
+ width:42px;height:42px;flex:0 0 42px;border-radius:8px;
+}
+.pokemon-workspace .trainer-list-item{min-height:58px}
+.pokemon-workspace .trainer-list-item .art-placeholder{font-size:12px}
+.pokemon-detail-hero{
+ display:flex;flex-wrap:wrap;align-items:center;gap:18px;
+ margin-bottom:14px;
+}
+.pokemon-variant-previews{display:flex;gap:10px;flex-wrap:wrap}
+.pokemon-variant-card{
+ display:flex;flex-direction:column;gap:5px;align-items:center;
+ background:#31202f;color:#dfc5d1;padding:8px;
+ border:1px solid #694657;border-radius:11px;min-width:101px;
+}
+.pokemon-variant-card:hover{background:#4a2d40}
+.pokemon-variant-card.selected{background:#60354b;border-color:#ebb18a;color:#fff}
+.pokemon-variant-card .mon-portrait{width:86px;height:86px;border-radius:9px}
+.pokemon-variant-name{font-size:12px;font-weight:650}
+.pokemon-detail-copy{flex:1;min-width:190px;overflow-wrap:anywhere}
+.pokemon-detail-copy h2{margin:0;font-size:23px;color:#f8e0be}
+.pokemon-detail-copy p{margin:6px 0}
+@media(max-width:500px){
+ .pokemon-detail-hero{gap:12px}
+ .pokemon-variant-previews{gap:7px}
+ .pokemon-variant-card{min-width:88px;padding:6px}
+ .pokemon-variant-card .mon-portrait{width:75px;height:75px}
+ .pokemon-detail-copy{min-width:0;width:100%}
+}
