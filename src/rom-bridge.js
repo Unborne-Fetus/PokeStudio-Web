@@ -170,6 +170,7 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
  }
  return {
   popup,
+  isAvailable:()=>!finished&&Boolean(channel||!popup.closed),
   async transfer(rom){
    if(finished||(!channel&&popup.closed))throw Error("Web Emu has closed. Click Play in Web Emu again.");
    if(resolvePending)throw Error("A ROM transfer is already in progress.");
