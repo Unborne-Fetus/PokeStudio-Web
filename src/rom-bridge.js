@@ -88,7 +88,20 @@ export async function findLatestBuild(workspace){
  if(!workspace.repo||!workspace.branch)throw Error("Connect to a ROM repository first.");
  if(!workspace.token)throw Error("A GitHub token with Actions: Read permission is required for build artifacts.");
  const base="/repos/"+workspace.repo;
- const runs=(await workspace.request(base+"/actions/workflows/"+workflow+"/runs?status=success&branch="+encodeURIComponent(workspace.branch)+"&per_page=35")).workflow_runs||[];
+ // Fetch workflow runs and matching repository artifacts together: the common
+ // successful-build path takes one network round-trip instead of two.
+ const [runsResponse,artifactsResponse]=await Promise.allSettled([
+  workspace.request(base+"/actions/workflows/"+workflow+"/runs?status=success&branch="+encodeURIComponent(workspace.branch)+"&per_page=35"),
+  workspace.request(base+"/actions/artifacts?name=Pokemon-Brisk-Emerald&per_page=100")
+ ]);
+ if(runsResponse.status!=="fulfilled")throw runsResponse.reason;
+ const runs=runsResponse.value.workflow_runs||[];
+ if(artifactsResponse.status==="fulfilled"){
+  const matched=selectArtifact(runs,artifactsResponse.value.artifacts||[],workspace.branch);
+  if(matched)return matched;
+ }
+ // Fallback for older GitHub Enterprise/API responses that omit workflow_run
+ // metadata from repository-wide artifact listings, or truncate the results.
  for(const run of runs){
   if(run.conclusion!=="success"||run.head_branch!==workspace.branch)continue;
   const artifacts=(await workspace.request(base+"/actions/runs/"+run.id+"/artifacts?per_page=100")).artifacts||[];
