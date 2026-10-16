@@ -3,7 +3,7 @@
 <meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — graphical and source-code editor for pokeemerald-expansion.">
 <title>PokéStudio Web · ROM hacking IDE</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.css">
-<link rel="stylesheet" href="style.css?rev=webemu-sprites-4"></head>
+<link rel="stylesheet" href="style.css?rev=webemu-speed-6"></head>
 <body>
 <header class="topbar">
   <a class="brand" href="./" aria-label="PokéStudio home"><span class="brand-icon">◆</span><strong>PokéStudio</strong><small>WEB</small></a>
@@ -55,9 +55,10 @@
 <dialog id="webemu-dialog" aria-labelledby="webemu-title">
  <div class="dialog-head"><h2 id="webemu-title">Play Brisk Emerald in Web Emu</h2><button id="webemu-close" class="subtle" type="button" aria-label="Close">✕</button></div>
  <p id="webemu-status" role="status" aria-live="polite">Finding the newest successful GBA build…</p>
- <p class="muted">Only committed builds are playable. The ROM is sent directly to your Web Emu tab; your GitHub token is never shared.</p>
+ <p class="muted">Only committed builds are playable. The most recent GBA is cached in this browser for faster repeat launches; your GitHub token is never stored or sent to Web Emu.</p>
  <div class="dialog-actions webemu-actions">
   <button id="webemu-manual" class="btn" type="button">Choose GBA or artifact ZIP</button>
+  <button id="webemu-clear-cache" class="btn" type="button" title="Remove saved GBA copy from this browser">Clear cached ROM</button>
   <a id="webemu-actions-link" class="btn" target="_blank" rel="noopener noreferrer" href="https://github.com/Unborne-Fetus/Pokemon-Brisk-Emerald/actions/workflows/build-brisk-emerald.yml">View build artifacts ↗</a>
  </div>
  <input id="webemu-file" type="file" accept=".gba,.zip" hidden>
@@ -74,5 +75,5 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/javascript/javascript.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/python/python.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/yaml/yaml.min.js" defer></script>
-<script type="module" src="src/main.js?rev=webemu-sprites-4"></script>
+<script type="module" src="src/main.js?rev=webemu-speed-6"></script>
 </body></html>
