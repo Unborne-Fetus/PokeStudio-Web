@@ -92,8 +92,8 @@ export async function findLatestBuild(workspace){
  for(const run of runs){
   if(run.conclusion!=="success"||run.head_branch!==workspace.branch)continue;
   const artifacts=(await workspace.request(base+"/actions/runs/"+run.id+"/artifacts?per_page=100")).artifacts||[];
-  const matched=selectArtifact([run],artifacts,workspace.branch);
-  if(matched)return matched;
+  const artifact=artifacts.find(item=>item.name==="Pokemon-Brisk-Emerald"&&!item.expired);
+  if(artifact)return {run,artifact};
  }
  throw Error("No unexpired successful Brisk Emerald GBA artifact was found for "+workspace.branch+". Build the ROM first, then try again.");
 }
