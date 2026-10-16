@@ -124,7 +124,7 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
  // Open synchronously on the user's click to avoid popup blocking.
  const popup=host.open(url.href,"_blank");
  if(!popup)throw Error("The browser blocked Web Emu. Allow popups for this site and retry.");
- let ready=false,queued=null,resolvePending=null,rejectPending=null,finished=false,expiry;
+ let ready=false,queued=null,resolvePending=null,rejectPending=null,finished=false,expiry,submitted=false,lastFailure=null;
  const listener=event=>{
   if(event.source!==popup||event.origin!==url.origin)return;
   const data=event.data;
@@ -132,6 +132,7 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
   if(data.type==="webemu:ready"){
    ready=true;
    if(queued)send();
+   else if(lastFailure)popup.postMessage({type:"pokestudio:failed",nonce,message:lastFailure},url.origin);
   }else if(data.type==="webemu:received"){
    if(resolvePending){resolvePending();resolvePending=null;rejectPending=null;queued=null}
   }else if(data.type==="webemu:error"){
@@ -140,7 +141,8 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
  };
  host.addEventListener("message",listener);
  const send=()=>{
-  if(!ready||!queued||popup.closed)return;
+  if(!ready||!queued||popup.closed||submitted)return;
+  submitted=true;
   // Transfer the ROM's buffer; the GitHub token is never included.
   const data=queued.bytes.slice().buffer;
   popup.postMessage({type:"pokestudio:rom",nonce,name:queued.name,rom:data},url.origin,[data]);
@@ -153,6 +155,7 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
    if(finished||popup.closed)throw Error("Web Emu has closed. Click Play in Web Emu again.");
    if(resolvePending)throw Error("A ROM transfer is already in progress.");
    queued={name:fileName(rom.name),bytes:ensureRom(rom.bytes)};
+   lastFailure=null;submitted=false;
    return new Promise((resolve,reject)=>{
     resolvePending=()=>{dispose();resolve()};
     rejectPending=reject;
@@ -160,7 +163,8 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
    });
   },
   fail(message){
-   if(ready&&!popup.closed)popup.postMessage({type:"pokestudio:failed",nonce,message:String(message).slice(0,240)},url.origin);
+   lastFailure=String(message).slice(0,240);
+   if(ready&&!popup.closed)popup.postMessage({type:"pokestudio:failed",nonce,message:lastFailure},url.origin);
   },
   dispose
  };
