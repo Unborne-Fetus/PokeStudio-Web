@@ -82,7 +82,7 @@ test("Pokédex tab browses Pokémon, shows shiny art, and saves inline + shared 
   const entry=find(root,n=>n.tagName==="textarea")[0];
   assert.equal(entry.value,"Seed sunshine.");
   entry.value="Edited description.\nA second line.";entry.oninput();
-  find(root,n=>n.tagName==="button"&&n.textContent.includes("Save entry for this Pokémon"))[0].onclick();
+  await find(root,n=>n.tagName==="button"&&n.textContent.includes("Save entry for this Pokémon"))[0].onclick();
   const info=readFields(speciesEntries(data.get(speciesPath).value)[0].body);
   assert.equal(decodeDexExpression(info.get("description").value),"Edited description.\nA second line.");
   const shiny=find(root,n=>n.className.includes("pokemon-shiny-option")&&n.textContent.includes("Shiny"))[0];
