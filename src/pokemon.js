@@ -1,5 +1,8 @@
 import {autocomplete} from "./autocomplete.js";
 import {definitions} from "./game-legal.js";
+import {nationalDexIndex} from "./brisk-art.js";
+import {speciesCatalog} from "./species-forms.js";
+import {monIcon} from "./pokemon-art.js";
 import {speciesEntries,readFields,editSpeciesField,setSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "./pokemon-source.js";
 
 const e=(tag,cls="",text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
@@ -67,22 +70,49 @@ export async function pokemonPage(api,root){
   }));
  }
  if(!root.isConnected)return;
- const [abilitiesHeader,movesHeader,pokemonHeader,itemsHeader,configHeader]=await Promise.all([
+ const [abilitiesHeader,movesHeader,pokemonHeader,itemsHeader,configHeader,speciesHeader,dexHeader]=await Promise.all([
   optional(api,"include/constants/abilities.h"),
   optional(api,"include/constants/moves.h"),
   optional(api,"include/constants/pokemon.h"),
   optional(api,"include/constants/items.h"),
-  optional(api,"include/config/pokemon.h")
+  optional(api,"include/config/pokemon.h"),
+  optional(api,"include/constants/species.h"),
+  optional(api,"include/constants/pokedex.h")
  ]);
  if(!root.isConnected)return;
  progress.remove();
  const abilities=definitions(abilitiesHeader,"ABILITY"),moves=definitions(movesHeader,"MOVE");
  const types=typeOptions(pokemonHeader),groups=symbolOptions(pokemonHeader,"EGG_GROUP"),
        items=definitions(itemsHeader,"ITEM");
+ const dex=nationalDexIndex(dexHeader),speciesForms=speciesCatalog(speciesHeader,dexHeader);
  const speciesChoices=[...byId.keys()].sort((a,b)=>pretty(a).localeCompare(pretty(b))).map(value=>({value,label:pretty(value)}));
  const roster=e("div","trainer-workspace pokemon-workspace"),browser=e("section","panel trainer-browser"),detail=e("section","trainer-detail");
  root.append(roster);roster.append(browser,detail);
  browser.append(e("h3","","POKÉMON"));
+ const variantSwitcher=e("div","pokemon-shiny-switch");
+ variantSwitcher.setAttribute("role","group");
+ variantSwitcher.setAttribute("aria-label","Pokémon sprite appearance");
+ browser.append(variantSwitcher);
+ const browserVariantButtons=[],detailVariantButtons=[];
+ let showShiny=false;
+ function syncVariantButtons(){
+  for(const [control,isShiny] of [...browserVariantButtons,...detailVariantButtons]){
+   control.classList.toggle("selected",showShiny===isShiny);
+   control.setAttribute("aria-pressed",String(showShiny===isShiny));
+  }
+ }
+ function setShiny(next){
+  if(showShiny===next)return;
+  showShiny=next;
+  syncVariantButtons();
+  renderList();
+ }
+ for(const [label,isShiny] of [["Normal",false],["✨ Shiny",true]]){
+  const control=button(label,()=>setShiny(isShiny),"pokemon-shiny-option");
+  browserVariantButtons.push([control,isShiny]);
+  variantSwitcher.append(control);
+ }
+ syncVariantButtons();
  const search=e("input");search.placeholder="Search Pokémon, species ID or form…";search.setAttribute("aria-label","Search Pokémon");browser.append(search);
  const count=e("p","muted"),list=e("div","trainer-list"),more=button("Show more",()=>{limit+=100;renderList()});browser.append(count,list,more);
  let selected=byId.has("SPECIES_BULBASAUR")?"SPECIES_BULBASAUR":speciesChoices[0]?.value,limit=100,serial=0;
@@ -98,7 +128,10 @@ export async function pokemonPage(api,root){
   count.textContent=entries.length.toLocaleString()+" Pokémon / forms";
   list.replaceChildren();for(const x of entries.slice(0,limit)){
    const row=button(x.label,()=>{selected=x.value;renderList();renderDetails()},"trainer-list-item"+(x.value===selected?" active":""));
-   const words=e("div");words.append(e("strong","",x.label),e("small","",x.value));row.replaceChildren(words);list.append(row);
+   const art=monIcon(api,x.value,showShiny,dex,speciesForms);
+    art.classList.add("pokemon-list-portrait");
+    const words=e("div");words.append(e("strong","",x.label),e("small","",x.value));
+    row.replaceChildren(art,words);list.append(row);
   }
   more.hidden=entries.length<=limit;
  }
@@ -116,9 +149,20 @@ export async function pokemonPage(api,root){
   const entry=speciesEntries(record.value).find(x=>x.id===selected);
   if(!entry){loading.textContent="Species was not found in "+where.path;return}
   const fields=readFields(entry.body);detail.replaceChildren();
-  const header=e("div","panel pokemon-detail-header");
-  header.append(e("h2","",textMacro(fields.get("speciesName")?.value)||pretty(selected)),e("p","muted",selected+" · "+where.path));
+  const header=e("div","panel pokemon-detail-header"),hero=e("div","pokemon-detail-hero");
+  const copy=e("div","pokemon-detail-copy");
+  copy.append(e("h2","",textMacro(fields.get("speciesName")?.value)||pretty(selected)),e("p","muted",selected+" · "+where.path));
+  const previews=e("div","pokemon-variant-previews");
+  detailVariantButtons.length=0;
+  for(const [label,isShiny] of [["Normal",false],["✨ Shiny",true]]){
+   const control=button("",()=>setShiny(isShiny),"pokemon-variant-card");
+   control.setAttribute("aria-label","Display "+(isShiny?"shiny":"normal")+" "+pretty(selected)+" sprites in the Pokémon list");
+   control.append(monIcon(api,selected,isShiny,dex,speciesForms),e("span","pokemon-variant-name",label));
+   detailVariantButtons.push([control,isShiny]);previews.append(control);
+  }
+  hero.append(previews,copy);header.append(hero);
   const open=button("Open species code",()=>api.open(where.path));header.append(open);detail.append(header);
+  syncVariantButtons();
   function write(key,value){
    try{api.changeFor(where.path,editSpeciesField(record.value,selected,key,value));
     api.notify(pretty(selected)+": updated "+key+" (not yet committed).","success");
