@@ -46,7 +46,7 @@ export function installWebEmu({repo,isRemote,modified,notify}){
   event.target.value="";
   if(!file)return;
   let bridge=activeBridge;
-  if(!bridge||bridge.popup.closed){
+  if(!bridge||!bridge.isAvailable()){
    try{bridge=beginWebEmuHandoff(window);activeBridge=bridge}
    catch(error){status(error.message,true);return}
   }
