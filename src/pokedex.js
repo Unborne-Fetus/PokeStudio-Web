@@ -1,6 +1,7 @@
 import {speciesEntries,readFields,editSpeciesField} from "./pokemon-source.js";
 import {nationalDexIndex} from "./brisk-art.js";
 import {speciesCatalog} from "./species-forms.js";
+import {isTotemSpecies} from "./species-visibility.js";
 import {monIcon} from "./pokemon-art.js?rev=form-canvas-5";
 import {autocomplete} from "./autocomplete.js";
 import {decodeDexExpression,encodeSimpleString,parseSimpleString,dexEntryKind,editDexDescription,sharedDexEntry,editSharedDexText,entryWarnings} from "./pokedex-source.js";
@@ -82,6 +83,7 @@ export async function pokedexPage(api,root){
    if(!raw)return;
    for(const entry of speciesEntries(raw,path)){
     const fields=readFields(entry.body);
+    if(isTotemSpecies(entry.id,fields))continue;
     const label=parseSimpleString(fields.get("speciesName")?.value) || pretty(entry.id);
     const category=parseSimpleString(fields.get("categoryName")?.value)||"";
     const national=fields.get("natDexNum")?.value||"";
