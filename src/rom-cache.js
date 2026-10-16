@@ -76,7 +76,9 @@ export async function rememberBuild(workspace,artifact,rom){
  const record={artifactId,name:rom?.name,bytes:rom?.bytes};
  if(!artifactId||!valid(record,artifactId))return false;
  memory.set(key,record);
- // Store a cloned ArrayBuffer; don't mutate the bytes being handed to Web Emu.
+ // Delay cloning for IndexedDB until after the handoff has already started.
+ // An optional browser cache must never add a multi-megabyte copy to launch.
+ await Promise.resolve();
  return writeStored(key,{artifactId,name:rom.name,bytes:rom.bytes.slice().buffer});
 }
 export async function clearCachedBuild(workspace){
