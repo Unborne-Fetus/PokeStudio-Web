@@ -6,6 +6,6 @@
   "description": "Browser-first pokeemerald-expansion IDE",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check src/github.js && node --check src/main.js && node --check src/editors.js && node --check src/tilesets.js && node --check src/zip.js && node --check src/pokemon-source.js && node --check src/pokemon.js"
+    "check": "node --check src/github.js && node --check src/main.js && node --check src/editors.js && node --check src/tilesets.js && node --check src/zip.js && node --check src/pokemon-source.js && node --check src/pokemon.js && node --check src/pokedex.js && node --check src/pokedex-source.js"
   }
 }
