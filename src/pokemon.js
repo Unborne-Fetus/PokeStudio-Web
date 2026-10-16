@@ -2,7 +2,7 @@ import {autocomplete} from "./autocomplete.js";
 import {definitions} from "./game-legal.js";
 import {nationalDexIndex} from "./brisk-art.js";
 import {speciesCatalog} from "./species-forms.js";
-import {monIcon} from "./pokemon-art.js";
+import {monIcon} from "./pokemon-art.js?rev=form-canvas-5";
 import {speciesEntries,readFields,editSpeciesField,setSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "./pokemon-source.js";
 
 const e=(tag,cls="",text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
