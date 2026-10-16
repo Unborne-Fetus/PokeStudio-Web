@@ -6,6 +6,7 @@ import {mapStudio} from "./maps.js";
 import {trainerPage} from "./trainers.js?rev=forms-art-3";
 import {pokemonPage} from "./pokemon.js?rev=forms-art-3";
 import {pokedexPage} from "./pokedex.js?rev=forms-art-3";
+import {installWebEmu} from "./webemu-ui.js";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
@@ -146,4 +147,4 @@ function eventWiring(){
  window.addEventListener("keydown",e=>{if(!(e.ctrlKey||e.metaKey))return;const key=e.key.toLowerCase();if(key==="z"||key==="y"){e.preventDefault();e.stopImmediatePropagation();applyHistory(key==="y"||e.shiftKey?"redo":"undo");return}if(e.key.toLowerCase()==="s"){e.preventDefault();downloadCurrent()}else if(e.key.toLowerCase()==="p"){e.preventDefault();showQuick()}else if(e.key.toLowerCase()==="f"&&!$("quick-dialog").open){e.preventDefault();setView("code");$("search-line").hidden=false;$("find-text").focus()}},true);
  window.addEventListener("beforeunload",e=>{if(modified().length){e.preventDefault();e.returnValue=""}});
 }
-initEditor();eventWiring();renderTree();status();if(window.location.protocol==="https:"||window.location.hostname==="localhost"){connect()}else info("For GitHub API requests, open this app on GitHub Pages or a local HTTP server.");
+initEditor();eventWiring();installWebEmu({repo,isRemote:()=>source==="remote",modified,notify:info});renderTree();status();if(window.location.protocol==="https:"||window.location.hostname==="localhost"){connect()}else info("For GitHub API requests, open this app on GitHub Pages or a local HTTP server.");
