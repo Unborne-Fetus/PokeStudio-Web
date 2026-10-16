@@ -2,6 +2,7 @@ import {autocomplete} from "./autocomplete.js";
 import {definitions} from "./game-legal.js";
 import {nationalDexIndex} from "./brisk-art.js";
 import {speciesCatalog} from "./species-forms.js";
+import {isTotemSpecies} from "./species-visibility.js";
 import {monIcon} from "./pokemon-art.js?rev=form-canvas-5";
 import {speciesEntries,readFields,editSpeciesField,setSpeciesField,arrayEntry,levelMoves,eggMoves,editLevelMoves,editEggMoves} from "./pokemon-source.js";
 
@@ -66,7 +67,10 @@ export async function pokemonPage(api,root){
  for(let i=0;i<sourcePaths.length;i+=3){
   await Promise.all(sourcePaths.slice(i,i+3).map(async path=>{
    const source=await optional(api,path);
-   if(source)for(const entry of speciesEntries(source,path))byId.set(entry.id,{path,id:entry.id});
+   if(source)for(const entry of speciesEntries(source,path)){
+    if(isTotemSpecies(entry.id,readFields(entry.body)))continue;
+    byId.set(entry.id,{path,id:entry.id});
+   }
   }));
  }
  if(!root.isConnected)return;
