@@ -121,38 +121,57 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
  if(url.origin!==host.location.origin)throw Error("Web Emu handoff requires the same trusted GitHub Pages origin.");
  const nonce=host.crypto?.randomUUID?.()||Array.from(host.crypto.getRandomValues(new Uint32Array(4))).join("-");
  url.searchParams.set("pokestudio",nonce);
- // Open synchronously on the user's click to avoid popup blocking.
+ // Window opening MUST be synchronous inside the user's click handler.
  const popup=host.open(url.href,"_blank");
  if(!popup)throw Error("The browser blocked Web Emu. Allow popups for this site and retry.");
+ // Same-origin BroadcastChannel survives cross-origin-opener policy isolation.
+ // The nonce ensures two simultaneous emulator sessions never interfere.
+ const channel=typeof host.BroadcastChannel==="function"?new host.BroadcastChannel("pokestudio-webemu-"+nonce):null;
  let ready=false,queued=null,resolvePending=null,rejectPending=null,finished=false,expiry,submitted=false,lastFailure=null;
- const listener=event=>{
-  if(event.source!==popup||event.origin!==url.origin)return;
-  const data=event.data;
+ const deliver=message=>{
+  if(channel)channel.postMessage(message);
+  else if(!popup.closed)popup.postMessage(message,url.origin);
+ };
+ const send=()=>{
+  if(!ready||!queued||submitted||finished||(!channel&&popup.closed))return;
+  submitted=true;
+  const data=queued.bytes.slice().buffer;
+  const message={type:"pokestudio:rom",nonce,name:queued.name,rom:data};
+  // BroadcastChannel performs a structured clone; window messages transfer.
+  if(channel)channel.postMessage(message);
+  else popup.postMessage(message,url.origin,[data]);
+ };
+ const receive=data=>{
   if(!data||data.nonce!==nonce)return;
   if(data.type==="webemu:ready"){
    ready=true;
    if(queued)send();
-   else if(lastFailure)popup.postMessage({type:"pokestudio:failed",nonce,message:lastFailure},url.origin);
+   else if(lastFailure)deliver({type:"pokestudio:failed",nonce,message:lastFailure});
   }else if(data.type==="webemu:received"){
    if(resolvePending){resolvePending();resolvePending=null;rejectPending=null;queued=null}
   }else if(data.type==="webemu:error"){
    if(rejectPending){rejectPending(Error(String(data.message||"Web Emu could not open the ROM")));resolvePending=null;rejectPending=null;queued=null}
   }
  };
- host.addEventListener("message",listener);
- const send=()=>{
-  if(!ready||!queued||popup.closed||submitted)return;
-  submitted=true;
-  // Transfer the ROM's buffer; the GitHub token is never included.
-  const data=queued.bytes.slice().buffer;
-  popup.postMessage({type:"pokestudio:rom",nonce,name:queued.name,rom:data},url.origin,[data]);
+ const listener=event=>{
+  if(event.source!==popup||event.origin!==url.origin)return;
+  receive(event.data);
  };
- expiry=host.setTimeout(()=>{dispose();if(rejectPending)rejectPending(Error("Web Emu did not complete the handoff. Retry or open the ROM manually."))},10*60*1000);
- function dispose(){if(finished)return;finished=true;host.removeEventListener("message",listener);host.clearTimeout(expiry)}
+ host.addEventListener("message",listener);
+ if(channel)channel.onmessage=event=>receive(event.data);
+ expiry=host.setTimeout(()=>{
+  if(rejectPending)rejectPending(Error("Web Emu did not complete the handoff. Retry or open the ROM manually."));
+  dispose();
+ },10*60*1000);
+ function dispose(){
+  if(finished)return;
+  finished=true;host.removeEventListener("message",listener);host.clearTimeout(expiry);
+  channel?.close();
+ }
  return {
   popup,
   async transfer(rom){
-   if(finished||popup.closed)throw Error("Web Emu has closed. Click Play in Web Emu again.");
+   if(finished||(!channel&&popup.closed))throw Error("Web Emu has closed. Click Play in Web Emu again.");
    if(resolvePending)throw Error("A ROM transfer is already in progress.");
    queued={name:fileName(rom.name),bytes:ensureRom(rom.bytes)};
    lastFailure=null;submitted=false;
@@ -164,7 +183,7 @@ export function beginWebEmuHandoff(host=window,emuUrl=WEB_EMU_URL){
   },
   fail(message){
    lastFailure=String(message).slice(0,240);
-   if(ready&&!popup.closed)popup.postMessage({type:"pokestudio:failed",nonce,message:lastFailure},url.origin);
+   if(ready)deliver({type:"pokestudio:failed",nonce,message:lastFailure});
   },
   dispose
  };
