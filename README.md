@@ -40,6 +40,7 @@ The project is currently an **experimental alpha**, not a feature-complete Porym
 Reading public repositories requires no token. To commit files or trigger GitHub Actions, open **☰ Workspace settings** and supply a **fine-grained token** scoped only to the target repository.
 
 - For commits: **Contents: Read and write**.
+- To **commit to both Brisk Emerald and Searing Sun**, include **both repositories** in the token's Repository access selection. A token scoped only to Brisk can still read Searing Sun publicly, but cannot write to it.
 - For manual builds: **Actions: Read and write**.
 - Use minimum permissions and short expiration. **Never paste a token into the project source, GitHub issue, chat, or URL.**
 - The token is only held in memory while the browser tab is open. It is **not** stored in IndexedDB or localStorage.
