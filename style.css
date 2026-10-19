@@ -378,3 +378,13 @@ input::placeholder{color:#a991a1}
  .searing-browser .trainer-list{max-height:170px}
  .searing-entry-row{font-size:11px}
 }
+
+@media(max-width:750px){
+ body{display:flex;flex-direction:column}
+ .topbar{flex:0 0 auto}
+ .repo-controls{flex-wrap:wrap;min-width:0}
+ .repo-controls input#repo{flex:1 1 145px;width:auto}
+ #workspace{height:auto!important;flex:1;min-height:0;position:relative}
+ #sidebar{top:0;bottom:0;height:auto}
+ #footer{flex:0 0 25px}
+}
