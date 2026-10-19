@@ -79,3 +79,33 @@ test("Searing Sun project supports a complete encounter table save without ROM o
   if(priorConfirm===undefined)delete globalThis.confirm;else globalThis.confirm=priorConfirm;
  }
 });
+
+test("Local reference CSV can populate encounter browser without uploading original tables",async()=>{
+ const previous=globalThis.document,previousConfirm=globalThis.confirm;
+ globalThis.document={createElement:tag=>new FakeElement(tag)};
+ globalThis.confirm=()=>true;
+ try{
+  const {data,api}=fixture(),root=new FakeElement("div");
+  await searingSunEncounterPage(api,root);
+  const csv=[
+   "file,location,zone_ids,pair,time,set,slot,species,species_name,form,rate,min_level,max_level",
+   "9,Route 1,1,0,day,0,0,25,Pikachu,0,100,5,7"
+  ].join("\n");
+  const chooser=walk(root,x=>x.tagName==="input"&&x.type==="file")[0];
+  assert.ok(chooser);
+  chooser.files=[{name:"reference.csv",async text(){return csv}}];
+  await chooser.onchange({target:chooser});
+  assert.equal(api.changes.length,0,"importing reference must not stage original data");
+  assert.ok(findButton(root,"File 9 · Pair 0 · day"));
+  findButton(root,"File 9 · Pair 0 · day").onclick();
+  assert.equal(input(root,"Encounter file ID").value,"9");
+  input(root,"Pokémon name or ID").value="Eevee";
+  findButton(root,"Add species override").onclick();
+  findButton(root,"Add table override").onclick();
+  assert.equal(JSON.parse(data.get(CHANGES_PATH)).edits[0].slots[0].species,133);
+  assert.deepEqual(api.changes,[CHANGES_PATH]);
+ }finally{
+  if(previous===undefined)delete globalThis.document;else globalThis.document=previous;
+  if(previousConfirm===undefined)delete globalThis.confirm;else globalThis.confirm=previousConfirm;
+ }
+});
