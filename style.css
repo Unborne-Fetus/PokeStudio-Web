@@ -339,3 +339,42 @@ input::placeholder{color:#a991a1}
 .webemu-actions{justify-content:flex-start;flex-wrap:wrap}
 .webemu-actions .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:normal;text-align:center}
 @media(max-width:760px){#play-webemu{font-size:11px;padding:6px 9px}.webemu-actions>*{flex:1 0 auto}}
+
+
+/* Multi-project source workflows (USUM + Emerald + generic). */
+#tabs button[hidden],#build-btn[hidden],#play-webemu[hidden]{display:none!important}
+#project-preset{max-width:138px;min-width:105px;padding:7px;font-size:12px}
+#quick-links{display:flex;flex-direction:column;gap:5px}
+#project-type{display:block;font-size:11px;line-height:1.45;color:#eab889}
+.searing-workspace{align-items:start}
+.searing-browser{min-height:280px}
+.searing-list-item{display:flex;flex-direction:column;align-items:stretch;gap:3px;overflow-wrap:anywhere;min-height:52px}
+.searing-list-item small{font-size:10px;opacity:.86}
+.searing-note{color:#e7c3a0;padding:9px 12px;margin:0 0 12px;min-height:0}
+.searing-note:empty{display:none}
+.searing-note.error{border-radius:7px;background:#562838;color:#ffbec9}
+.searing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:7px 13px;min-width:0}
+.searing-panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.searing-panel h3{margin-bottom:0;font-size:14px}
+.searing-panel>.muted{line-height:1.55;margin:0}
+.searing-actions{display:flex;flex-wrap:wrap;gap:8px;padding:7px 0}
+.searing-entry-list{display:flex;flex-direction:column;gap:6px}
+.searing-entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid #674153;background:#311d2b}
+.searing-entry-row>span{flex:1;min-width:135px;overflow-wrap:anywhere;color:#e7cfbb}
+.searing-entry-row>.btn{padding:5px 9px;min-height:28px}
+.searing-workspace .form-field{margin:0}
+.searing-workspace datalist{display:none}
+@media(max-width:1150px){
+ #project-preset{width:115px;max-width:115px}
+ .repo-controls input{width:185px}
+ .repo-controls #branch{width:95px}
+}
+@media(max-width:760px){
+ .topbar{gap:5px;padding:5px 8px;height:auto;min-height:57px;flex-wrap:wrap}
+ #project-preset{max-width:100%;width:118px}
+ .repo-controls input{width:min(40vw,230px)}
+ .searing-workspace{grid-template-columns:1fr}
+ .searing-browser{position:static;max-height:300px}
+ .searing-browser .trainer-list{max-height:170px}
+ .searing-entry-row{font-size:11px}
+}
