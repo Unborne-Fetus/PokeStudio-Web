@@ -1,6 +1,6 @@
 # PokéStudio Web
 
-**PokéStudio Web** is a browser-first, install-free Pokémon ROM-hacking workspace for projects based on **pokeemerald-expansion**, initially optimized for **Pokémon Brisk Emerald**.
+**PokéStudio Web** is a browser-first, install-free workspace for **pokeemerald-expansion** projects (including Brisk Emerald), **USUM patch projects** (including Pokémon Searing Sun), and other GitHub source repositories.
 
 🌐 **Live site:** https://unborne-fetus.github.io/PokeStudio-Web/
 
@@ -10,11 +10,12 @@ The editor works with a source repository, not a compiled GBA ROM. Open it on de
 
 | Area | Current functionality |
 | --- | --- |
-| Project browsing | Connect to any public GitHub repo and branch, recursively browse folders, filename filter, quick open (Ctrl/Cmd + P), and load individual text/binary files |
+| Project browsing | Select Brisk Emerald or Searing Sun as a preset, or connect to any GitHub repo/branch. PokéStudio automatically detects the project layout, shows compatible editors, and supports quick open (Ctrl/Cmd + P). |
 | Code | CodeMirror code editor (with built-in textarea fallback), line numbers, common syntax modes, find/replace, shortcuts and downloads |
 | Maps & events | Three separate map modes — Appearance (paint/pick metatiles), Collision (paint collision and elevation), Events (add/edit/drag NPCs, warps, triggers and signs) — plus map metadata and connections |
 | Map layouts | Read `data/layouts/layouts.json` and binary `map.bin`; recolor indexed tileset art using the project’s JASC `.pal` files; preserve collision/elevation bitfields while painting appearance |
-| Wild encounters | Parse `src/data/wild_encounters.json`, find maps and edit encounter rates, species and per-slot level ranges without changing existing slot counts |
+| Emerald wild encounters | Parse `src/data/wild_encounters.json`, find maps and edit encounter rates, species and per-slot level ranges without changing existing slot counts |
+| Searing Sun / Gen 7 encounters | Edit the repository's sparse `data/encounters/changes.json` with table file/pair/time, species/form, SOS slot, levels, and rate overrides. Optionally load a local `reference.csv` for original encounter details and rate validation without uploading the CSV. |
 | Pokémon | Search species and forms with the same animated front sprites as Trainer Studio; switch the list between normal and shiny, and compare both previews. Alternate forms and custom Megas are read from the ROM's own graphics and shiny palettes instead of incorrectly indexing Brisk Dex sprites by internal species IDs. Visually edit source-backed base stats, types, abilities, growth, breeding, simple evolutions, level-up and egg moves across linked C files. Unsupported expressions are preserved and exposed in Code mode. |
 | Pokédex | Dedicated searchable Pokédex Studio with the shared animated normal and shiny Pokémon portraits, live description preview, source-backed display name, category, height, weight, color, Pokédex positioning, National Dex assignment and multiline Pokédex text. Includes source-aware unique or shared entry edits. |
 | Trainers | Dedicated visual Trainer Studio with trainer portraits, searchable roster, 6-slot Pokémon cards, sprites, team settings, moves, abilities, items, levels, IVs/EVs, party add/remove/reorder and careful source edits |
@@ -29,8 +30,8 @@ The project is currently an **experimental alpha**, not a feature-complete Porym
 
 ## Start editing
 
-1. Visit the site and connect to `Unborne-Fetus/Pokemon-Brisk-Emerald` (or another pokeemerald-expansion source repository). Leave the branch field blank to load the repository's default branch.
-2. Browse the Explorer, click a file, or use the right-hand quick links.
+1. Visit the site and choose the **Brisk Emerald** or **Searing Sun** preset, or enter another GitHub repository. Leave the branch field blank to load the repository's default branch.
+2. PokéStudio detects the repository's format and displays the appropriate editor tabs. Browse the Explorer, click a file, or use the project-specific quick links.
 3. Open a map's `map.json` and choose **Map & events** to work with events. Open `src/data/wild_encounters.json` and choose **Encounters** to edit routes. Use the **Pokédex** tab to edit Pokédex names, categories, measurements and entries (including text stored in `shared_dex_text.h`), while previewing animated normal/shiny artwork. Use the **Pokémon** tab to edit species, linked level-up/egg move lists, and simple evolutions. Use the **Trainers** tab for visual roster and team editing; it loads `src/data/trainers.party` automatically.
 4. Changes are staged **locally**, never pushed automatically. Click **Review changes** to inspect, **Export edits** to download an archive, or **Commit to GitHub** to save to the remote branch.
 
@@ -45,6 +46,18 @@ Reading public repositories requires no token. To commit files or trigger GitHub
 - This version loads a pinned third-party CodeMirror script from a CDN. Like any web app that requests credentials, only enter a token after checking that you trust the deployed website and its loaded scripts. A production deployment should vendor dependencies and migrate to a GitHub App OAuth flow.
 
 The commit action verifies the branch HEAD before writing a new Git tree. If someone else has updated the branch, it blocks the commit and asks you to reconnect/review instead of knowingly clobbering those commits. **It does not resolve merge conflicts** or validate whether edited C code compiles.
+
+### Edit Pokémon Searing Sun (Gen 7 / USUM)
+
+1. Choose **Searing Sun** from the project preset (repository `Unborne-Fetus/Pokemon-Seared-Sun`, default branch `main`). The app detects `data/encounters/changes.json` and `tools/encounters.py` and offers **Gen 7 Encounters** instead of the incompatible Emerald source editors.
+2. Click **+ New encounter table** and enter the encounter file ID, pair index and day/night time confirmed on your PC. Set optional levels, species and form overrides in sets 0–7 (ten slots per set) or SOS/weather set 8 (six slots), and rate overrides as needed.
+3. Optionally click **Load local reference.csv** to choose `workspace/encounters/reference.csv` generated by Searing Sun's local tools. The browser reads it **only in memory**, showing original area names, table levels, slots and effective rate totals. This file is never staged in GitHub or saved to drafts.
+4. Click **Save table override** and **Review changes**, then commit or export the sparse `data/encounters/changes.json`. No extracted Ultra Sun assets, GARC archives, ROMs or game keys are uploaded.
+5. On the PC with your matching USUM extraction, pull the JSON, run `APPLY_ENCOUNTERS.bat` and `SAVE_CHANGES.bat`, then commit the resulting patch. The website cannot directly rebuild your local 3DS game files.
+
+Species names for standard Gen 7 Pokémon are searchable; expansion-only Pokémon can use numeric IDs. The local reference CSV allows effective rates to be checked against original values. Without it, the Python dry-run validator on your PC remains essential for file/pair validity and complete encounter-rate sums.
+
+For any other project, **Code**, **JSON inspector**, **Changes** and GitHub commits still work; visual editing is shown only for supported formats.
 
 ### Build Brisk Emerald
 
@@ -76,7 +89,7 @@ To deploy this repository: GitHub **Settings → Pages → Source: GitHub Action
 
 ## Scope
 
-PokéStudio Web is intended to become a flexible pokeemerald-expansion IDE, not a special-purpose editor tied permanently to Brisk Emerald. File formats are preserved wherever possible; editing arbitrary expansion forks still requires checking their own source format differences. Contributions and bug reports are welcome.
+PokéStudio Web aims to support multiple project formats, with separate editors for Emerald source data and Searing Sun's Gen 7 sparse patch workflow. File formats are preserved wherever possible; editing arbitrary expansion forks still requires checking their own source format differences. Contributions and bug reports are welcome.
 
 ## Interface theme
 
