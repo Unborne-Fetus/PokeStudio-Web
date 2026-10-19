@@ -7,11 +7,14 @@ import {trainerPage} from "./trainers.js?rev=webemu-forms-5";
 import {pokemonPage} from "./pokemon.js?rev=hide-totems-7";
 import {pokedexPage} from "./pokedex.js?rev=hide-totems-7";
 import {installWebEmu} from "./webemu-ui.js";
+import {PROJECT_PROFILES,detectProject,presetForRepo,supportsView} from "./project-profiles.js";
+import {searingSunEncounterPage} from "./searing-encounters.js";
 const $=id=>document.getElementById(id);
 const repo=new GitHubWorkspace();
 const files=new Map();
 const history=new EditHistory();
 let assetPaths=new Set();
+let project=PROJECT_PROFILES.generic;
 let currentPath=null,view="code",source="remote",directory="",loadingEditor=false,editorCM=null,openSerial=0;const draftTimers=new Map();
 const readonlyNote="Changes remain local until exported or committed. Your GitHub repository is not modified automatically.";
 function info(message,type=""){const notice=$("notice");notice.textContent=message;notice.className=type}
@@ -36,6 +39,38 @@ function renderTree(){const root=$("files"),filter=$("search").value.toLowerCase
  }
  if(!matches)root.append(document.createElement("p")).textContent="No matching files.";
  else if(filter&&matches>250){const count=document.createElement("p");count.className="muted";count.textContent="Showing 250 of "+matches+" matches. Refine your search.";root.append(count)}
+}
+function syncProjectPreset(){
+ const selected=presetForRepo($("repo").value);
+ $("project-preset").value=selected?selected.repo:"custom";
+}
+function applyProjectProfile(){
+ project=detectProject(allPaths());
+ $("project-type").textContent=project.name;
+ $("project-type").title=project.description;
+ for(const tab of document.querySelectorAll("#tabs [data-view]"))tab.hidden=!supportsView(project,tab.dataset.view);
+ document.querySelector('#tabs [data-view="encounters"]').textContent=project.encounterLabel;
+ const isBrisk=source==="remote"&&repo.repo.toLowerCase()==="unborne-fetus/pokemon-brisk-emerald";
+ $("build-btn").hidden=project.id!=="emerald";
+ $("play-webemu").hidden=!isBrisk||project.id!=="emerald";
+ const quick=$("quick-links");quick.replaceChildren();
+ for(const item of project.quick){
+  const button=document.createElement("button");
+  button.className="quick";button.type="button";button.textContent=item.label;
+  button.onclick=()=>{
+   if(item.view){setView(item.view);return}
+   if(item.path.endsWith("/"))navigate(item.path.slice(0,-1));
+   else openFile(item.path);
+  };
+  quick.append(button);
+ }
+ $("project-tips").textContent=project.id==="searing"
+  ?"Gen 7 encounters are sparse JSON edits. Load local reference.csv in Encounters; after committing, run APPLY_ENCOUNTERS.bat and SAVE_CHANGES.bat on your PC. Full USUM archives stay local."
+  :project.id==="emerald"
+  ?"The Emerald editors work with this source project's maps, trainers, Pokémon definitions and wild encounters."
+  :"Use Code, JSON inspector and Changes with any repository. Game-specific visual editors appear automatically when their source formats are detected.";
+ if(!supportsView(project,view))setView("code");
+ syncProjectPreset();
 }
 function crumbButton(label,path){const b=document.createElement("button");b.textContent=label;b.onclick=()=>navigate(path);return b}
 async function loadRaw(path){if(files.has(path))return files.get(path);if(source!=="remote")throw Error("File not loaded locally: "+path);const raw=await repo.read(path);const rec={...raw,path,original:raw.isBinary?undefined:raw.value,originalBytes:raw.isBinary?raw.bytes.slice():undefined};if(!rec.isBinary){const draft=await readDraft(path,rec.sha);if(draft){rec.value=draft.value;info("Recovered an unsaved browser draft for "+path,"success")}}else{const draft=await readDraft(path,rec.sha);if(draft?.bytes){rec.bytes=new Uint8Array(draft.bytes);info("Recovered a binary draft for "+path,"success")}}
@@ -69,7 +104,7 @@ function applyHistory(direction){
  changedFile(item.path);renderView();
  info((direction==="undo"?"Undid":"Redid")+" edit to "+item.path,"success")
 }
-function setView(next){view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
+function setView(next){if(!supportsView(project,next)){info("This editor is unavailable for "+project.name+". Choose an available tab.","error");return}view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
 function renderView(){
  $("codepane").hidden=view!=="code";
  $("visual").hidden=!["map","trainers","pokemon","pokedex","encounters","data","sprites"].includes(view);
@@ -79,6 +114,7 @@ function renderView(){
  else if(view==="trainers")trainerPage(visualApi,$("visual")).catch(e=>info("Trainer Studio error: "+e.message,"error"));
   else if(view==="pokemon")pokemonPage(visualApi,$("visual")).catch(e=>info("Pokémon Studio error: "+e.message,"error"));
  else if(view==="pokedex")pokedexPage(visualApi,$("visual")).catch(e=>info("Pokédex Studio error: "+e.message,"error"));
+ else if(view==="encounters"&&project.id==="searing")searingSunEncounterPage(visualApi,$("visual")).catch(e=>info("Gen 7 encounter editor error: "+e.message,"error"));
  else if(["encounters","data","sprites"].includes(view))renderVisual(view,visualApi,$("visual")).catch(e=>info("Visual editor error: "+e.message,"error"));
  if(editorCM&&view==="code")setTimeout(()=>editorCM.refresh(),0)
 }
@@ -104,7 +140,7 @@ function makeButton(text,fn,klass="btn"){const b=document.createElement("button"
 function download(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)}
 function downloadCurrent(){const rec=current();if(!rec)return info("Open a file first","error");download(new Blob([rec.isBinary?rec.bytes:rec.value]),rec.path.split("/").at(-1));info("Downloaded "+rec.path,"success")}
 function exportAll(){const changes=modified();if(!changes.length)return info("No modified files to export","error");try{download(createZip(changes), "PokéStudio-edits.zip");info("Exported "+changes.length+" modified file(s) as a ZIP preserving their repository paths.","success")}catch(e){info("ZIP export failed: "+e.message,"error")}}
-async function connect(){const name=$("repo").value.trim(),branch=$("branch").value.trim();if(modified().length&&!confirm("Switch repository/branch? Export your pending changes first; drafts remain in browser storage."))return;const button=$("connect");button.disabled=true;button.textContent="Connecting…";try{repo.token=$("token").value.trim();await repo.connect(name,branch);source="remote";files.clear();history.clear();assetPaths=new Set(repo.tree.map(t=>t.path));directory="";currentPath=null;$("branch").value=repo.branch;$("repo-info").textContent=repo.repo;$("connection-status").innerHTML='<span class="dot connected"></span>Connected';renderTree();status();setEditorValue("");$("filename").textContent="No file selected";setView("code");info("Connected to "+repo.repo+" ("+repo.branch+") • "+repo.tree.length+" files"+(repo.truncated?" • GitHub truncated the tree; not all files are listed":"")+". Select a source file to begin.","success");}catch(e){info("Connection failed: "+e.message,"error")}finally{button.disabled=false;button.textContent="Connect"}}
+async function connect(){const name=$("repo").value.trim(),branch=$("branch").value.trim();if(modified().length&&!confirm("Switch repository/branch? Export your pending changes first; drafts remain in browser storage."))return;const button=$("connect");button.disabled=true;button.textContent="Connecting…";try{repo.token=$("token").value.trim();await repo.connect(name,branch);source="remote";files.clear();history.clear();assetPaths=new Set(repo.tree.map(t=>t.path));directory="";currentPath=null;applyProjectProfile();$("branch").value=repo.branch;$("repo-info").textContent=repo.repo;$("connection-status").innerHTML='<span class="dot connected"></span>Connected';renderTree();status();setEditorValue("");$("filename").textContent="No file selected";setView("code");info("Connected to "+repo.repo+" ("+repo.branch+") • "+repo.tree.length+" files"+(repo.truncated?" • GitHub truncated the tree; not all files are listed":"")+". Select a source file to begin.","success");}catch(e){info("Connection failed: "+e.message,"error")}finally{button.disabled=false;button.textContent="Connect"}}
 async function buildROM(){
  if(source!=="remote")return info("Connect to a GitHub repository to run its ROM build.","error");
  if(modified().length&&!confirm("There are uncommitted local edits. GitHub will build only the files currently on the remote branch. Continue?"))return;
@@ -116,7 +152,7 @@ async function buildROM(){
 function showCommit(){const changes=modified();if(!changes.length)return info("No changes to commit","error");if(source!=="remote")return info("Local projects can be exported, but not committed. Connect to a GitHub repository.","error");if(!repo.token){$("options-dialog").showModal();return info("Set your GitHub write token in Workspace settings, then try Commit again.","error")}const list=$("commit-files");list.replaceChildren();for(const file of changes){const line=document.createElement("div");line.textContent="● "+file.path;list.append(line)}$("commit-dialog").showModal()}
 async function doCommit(){const changes=modified(),message=$("commit-message").value.trim();if(!message)return info("Enter a commit message.","error");for(const f of changes){if(f.path.endsWith(".json")&&!f.isBinary){try{JSON.parse(f.value)}catch(err){return info("Invalid JSON in "+f.path+": "+err.message,"error")}}}
  const b=$("confirm-commit");b.disabled=true;b.textContent="Committing…";try{const hash=await repo.commit(changes,message);for(const f of changes){const r=files.get(f.path);if(r.isBinary)r.originalBytes=r.bytes.slice();else r.original=r.value;await deleteDraft(f.path)}$("commit-dialog").close();await repo.refresh();history.clear();assetPaths=new Set(repo.tree.map(t=>t.path));for(const [path,r] of files){const item=repo.lookup(path);if(item)r.sha=item.sha}renderTree();status();info("Committed "+changes.length+" file(s) to "+repo.branch+" ("+hash.slice(0,9)+")","success");}catch(e){info("Commit was not completed: "+e.message,"error")}finally{b.disabled=false;b.textContent="Commit changes"}}
-async function localFiles(event){const list=Array.from(event.target.files||[]);if(modified().length&&!confirm("Opening another workspace may hide your current edits. Export them first?"))return;files.clear();const first=list[0]?.webkitRelativePath.split("/")[0]||"";let loaded=0;for(const file of list){const path=file.webkitRelativePath?.replace(new RegExp("^"+first.replace(/[.*+?^\u0024{}()|[\]\\]/g,"\\$&")+"/"),"")||file.name;if(!textPath(path)&&!binaryPath(path))continue;if(file.size>15_000_000)continue;const isBinary=binaryPath(path)&&!textPath(path),r={path,sha:"local",isBinary};if(isBinary){r.bytes=new Uint8Array(await file.arrayBuffer());r.originalBytes=r.bytes.slice()}else{r.value=await file.text();r.original=r.value}files.set(path,r);loaded++}source="local";history.clear();assetPaths=new Set(files.keys());directory="";currentPath=null;setEditorValue("");$("filename").textContent="No file selected";renderTree();status();info("Opened "+loaded+" local files. Use Export edits to save changes; the browser cannot write directly back to arbitrary folders.","success")}
+async function localFiles(event){const list=Array.from(event.target.files||[]);if(modified().length&&!confirm("Opening another workspace may hide your current edits. Export them first?"))return;files.clear();const first=list[0]?.webkitRelativePath.split("/")[0]||"";let loaded=0;for(const file of list){const path=file.webkitRelativePath?.replace(new RegExp("^"+first.replace(/[.*+?^\u0024{}()|[\]\\]/g,"\\$&")+"/"),"")||file.name;if(!textPath(path)&&!binaryPath(path))continue;if(file.size>15_000_000)continue;const isBinary=binaryPath(path)&&!textPath(path),r={path,sha:"local",isBinary};if(isBinary){r.bytes=new Uint8Array(await file.arrayBuffer());r.originalBytes=r.bytes.slice()}else{r.value=await file.text();r.original=r.value}files.set(path,r);loaded++}source="local";history.clear();assetPaths=new Set(files.keys());directory="";currentPath=null;applyProjectProfile();setEditorValue("");$("filename").textContent="No file selected";renderTree();status();info("Opened "+loaded+" local files. Use Export edits to save changes; the browser cannot write directly back to arbitrary folders.","success")}
 function showQuick(filter=""){const dialog=$("quick-dialog");if(!dialog.open)dialog.showModal();$("quick-search").value=filter;quickResults();$("quick-search").focus()}
 function quickResults(){const query=$("quick-search").value.toLowerCase().trim(),list=$("quick-results");list.replaceChildren();const matched=visiblePaths().filter(p=>p.toLowerCase().includes(query)).slice(0,90);for(const path of matched){const b=pathButton(path,path);b.onclick=()=>{dialogClose("quick-dialog");openFile(path)};list.append(b)}}
 function dialogClose(id){const d=$(id);if(d.open)d.close()}
@@ -136,7 +172,15 @@ async function deleteDraft(path){await draftOperation(path,"delete")}
 function eventWiring(){
  $("build-btn").onclick=buildROM;
  $("undo-btn").onclick=()=>applyHistory("undo");$("redo-btn").onclick=()=>applyHistory("redo");
- $("connect").onclick=connect;$("refresh").onclick=async()=>{if(modified().length)return info("Export or commit edits before refreshing.","error");try{files.clear();await repo.refresh();renderTree();info("Repository tree refreshed","success")}catch(e){info(e.message,"error")}};
+ $("project-preset").onchange=()=>{
+  const value=$("project-preset").value;
+  if(value==="custom"){$("repo").focus();return}
+  $("repo").value=value;$("branch").value="";
+  if(!modified().length)void connect();
+  else info("Preset chosen. Review or export your uncommitted edits before connecting to another project.");
+ };
+ $("repo").oninput=syncProjectPreset;
+ $("connect").onclick=connect;$("refresh").onclick=async()=>{if(modified().length)return info("Export or commit edits before refreshing.","error");try{files.clear();await repo.refresh();assetPaths=new Set(repo.tree.map(t=>t.path));applyProjectProfile();renderTree();info("Repository tree refreshed","success")}catch(e){info(e.message,"error")}};
  $("search").oninput=renderTree;$("open-local").onclick=()=>$("folder").click();$("folder").onchange=localFiles;$("export-all").onclick=exportAll;$("save-file").onclick=downloadCurrent;$("review-btn").onclick=()=>setView("changes");$("commit-btn").onclick=showCommit;$("confirm-commit").onclick=doCommit;
  $("more-menu").onclick=()=>$("options-dialog").showModal();$("token").oninput=e=>{repo.token=e.target.value.trim()};$("clear-token").onclick=()=>{repo.token="";$("token").value="";info("GitHub token cleared from this browser tab.","success")};$("font-size").oninput=e=>{if(editorCM)editorCM.getWrapperElement().style.fontSize=e.target.value+"px";else $("editor").style.fontSize=e.target.value+"px"};
  document.querySelectorAll(".close-dialog").forEach(b=>b.onclick=()=>b.closest("dialog").close());document.querySelectorAll("#tabs [data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -147,4 +191,4 @@ function eventWiring(){
  window.addEventListener("keydown",e=>{if(!(e.ctrlKey||e.metaKey))return;const key=e.key.toLowerCase();if(key==="z"||key==="y"){e.preventDefault();e.stopImmediatePropagation();applyHistory(key==="y"||e.shiftKey?"redo":"undo");return}if(e.key.toLowerCase()==="s"){e.preventDefault();downloadCurrent()}else if(e.key.toLowerCase()==="p"){e.preventDefault();showQuick()}else if(e.key.toLowerCase()==="f"&&!$("quick-dialog").open){e.preventDefault();setView("code");$("search-line").hidden=false;$("find-text").focus()}},true);
  window.addEventListener("beforeunload",e=>{if(modified().length){e.preventDefault();e.returnValue=""}});
 }
-initEditor();eventWiring();installWebEmu({repo,isRemote:()=>source==="remote",modified,notify:info});renderTree();status();if(window.location.protocol==="https:"||window.location.hostname==="localhost"){connect()}else info("For GitHub API requests, open this app on GitHub Pages or a local HTTP server.");
+initEditor();eventWiring();installWebEmu({repo,isRemote:()=>source==="remote",modified,notify:info});applyProjectProfile();renderTree();status();if(window.location.protocol==="https:"||window.location.hostname==="localhost"){connect()}else info("For GitHub API requests, open this app on GitHub Pages or a local HTTP server.");
