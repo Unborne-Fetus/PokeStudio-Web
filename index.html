@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — graphical and source-code editor for pokeemerald-expansion.">
+<meta name="theme-color" content="#101722"><meta name="description" content="PokéStudio Web — browser editing for pokeemerald-expansion, Pokémon Searing Sun USUM patches, and other GitHub projects.">
 <title>PokéStudio Web · ROM hacking IDE</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/lib/codemirror.min.css">
-<link rel="stylesheet" href="style.css?rev=webemu-speed-6"></head>
+<link rel="stylesheet" href="style.css?rev=multi-project-8"></head>
 <body>
 <header class="topbar">
   <a class="brand" href="./" aria-label="PokéStudio home"><span class="brand-icon">◆</span><strong>PokéStudio</strong><small>WEB</small></a>
   <span class="top-divider"></span>
-  <div class="repo-controls"><label class="sr" for="repo">Repository</label><input id="repo" value="Unborne-Fetus/Pokemon-Brisk-Emerald" spellcheck="false" aria-label="Owner/repository"><input id="branch" value="" placeholder="default branch" aria-label="Branch"><button id="connect" class="btn primary">Connect</button></div>
+  <div class="repo-controls"><label class="sr" for="project-preset">Project preset</label><select id="project-preset" aria-label="Project preset" title="Choose a known project or type another repository"><option value="Unborne-Fetus/Pokemon-Brisk-Emerald">Brisk Emerald</option><option value="Unborne-Fetus/Pokemon-Seared-Sun">Searing Sun</option><option value="custom">Other project</option></select><label class="sr" for="repo">Repository</label><input id="repo" value="Unborne-Fetus/Pokemon-Brisk-Emerald" spellcheck="false" aria-label="Owner/repository"><input id="branch" value="" placeholder="default branch" aria-label="Branch"><button id="connect" class="btn primary">Connect</button></div>
   <div class="grow"></div><span id="dirty-counter" class="status-pill">0 changes</span>
   <button id="undo-btn" class="btn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button><button id="redo-btn" class="btn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button><button id="build-btn" class="btn">⚡ Build ROM</button><button id="play-webemu" class="btn" title="Play the latest successful Brisk Emerald build in Web Emu">▶ Play in Web Emu</button><button id="review-btn" class="btn">Review changes</button><button id="commit-btn" class="btn primary">Commit to GitHub</button>
   <button id="more-menu" class="btn icon-btn" aria-label="Project options" title="Project options">☰</button>
@@ -38,10 +38,10 @@
     <div id="changes" class="editor-pane" hidden></div>
   </section>
   <aside id="inspector"><div class="side-title">WORKSPACE</div>
-    <div class="inspector-section"><small>Project</small><strong id="repo-info">Not connected</strong><span id="branch-info" class="muted">Select a repository</span></div>
+    <div class="inspector-section"><small>Project</small><strong id="repo-info">Not connected</strong><span id="branch-info" class="muted">Select a repository</span><span id="project-type" class="muted">Detecting project format…</span></div>
     <div class="inspector-section"><small>Open file</small><strong id="current-info">None</strong><span class="muted" id="file-info">—</span></div>
-    <div class="inspector-section"><small>Quick open</small><button class="quick" data-quick="data/maps/">🗺 Maps</button><button class="quick" data-quick="src/data/wild_encounters.json">🌿 Wild encounters</button><button class="quick" data-quick="src/data/trainers.party" data-view-target="trainers">⚔ Trainers</button><button class="quick" data-quick="src/data/pokemon/species_info/" data-view-target="pokemon">◉ Pokémon editor</button><button class="quick" data-quick="src/data/pokemon/species_info/" data-view-target="pokedex">▤ Pokédex editor</button><button class="quick" data-quick="src/data/">📋 Species & items</button><button class="quick" data-quick="include/config/">⚙ Config</button></div>
-    <div class="inspector-section"><small>Tips</small><p class="muted">Open a map.json for visual event editing. Open map.bin from a map layout for a metatile grid. Open wild_encounters.json for a searchable encounter table.</p></div>
+    <div class="inspector-section"><small>Quick open</small><div id="quick-links"></div></div>
+    <div class="inspector-section"><small>Tips</small><p id="project-tips" class="muted">Connect a repository and PokéStudio will display the editors compatible with its files.</p></div>
   </aside>
 </div>
 <footer id="footer"><span id="connection-status"><span class="dot"></span>Not connected</span><span id="hint">Ctrl+Z Undo · Ctrl+Y Redo · Ctrl/Cmd + P Quick open</span><span id="position">Ln 1, Col 1</span></footer>
@@ -75,5 +75,5 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/javascript/javascript.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/python/python.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.20/mode/yaml/yaml.min.js" defer></script>
-<script type="module" src="src/main.js?rev=hide-totems-7"></script>
+<script type="module" src="src/main.js?rev=multi-project-8"></script>
 </body></html>
