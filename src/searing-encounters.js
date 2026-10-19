@@ -79,9 +79,11 @@ export async function searingSunEncounterPage(api,root){
  outer.append(browser,details);root.append(outer);
  const search=node("input");search.type="search";search.placeholder="Search file ID, location, day/night or pair…";
  const count=node("p","muted"),list=node("div","trainer-list");
+ const listTitle=node("h3","","OVERRIDDEN TABLES");
  const addTable=btn("+ New encounter table",()=>selectTable(null),"btn primary");
- browser.append(node("h3","","OVERRIDDEN TABLES"),search,addTable,count,list);
- let selected=data.edits.length?0:null,working=null,reference=null,slotSelection=null,rateSelection=null;
+ const more=btn("Show more tables",()=>{listLimit+=100;renderList()});
+ browser.append(listTitle,search,addTable,count,list,more);
+ let selected=data.edits.length?0:null,working=null,reference=null,slotSelection=null,rateSelection=null,listLimit=100;
  const setNote=(message,error=false)=>{
   notice.textContent=message||"";
   notice.classList.toggle("error",error);
@@ -96,21 +98,37 @@ export async function searingSunEncounterPage(api,root){
  function selectTable(index){
   selected=index;resetDraft();renderList();renderDetail();
  }
+ function chooseReference(table){
+  // The original CSV stays on this PC. Stage only a sparse override with
+  // its verified file/pair/time, never the original encounter contents.
+  selected=null;working={file:table.file,pair:table.pair,time:table.time,slots:[],rates:[]};
+  slotSelection=null;rateSelection=null;renderList();renderDetail();
+ }
  function renderList(){
   list.replaceChildren();
   const q=search.value.trim().toLowerCase();
-  const filtered=data.edits.map((e,i)=>({e,i})).filter(({e})=>
+  const staged=data.edits.map((e,i)=>({e,i,staged:true}));
+  const keys=new Set(staged.map(item=>tableKey(item.e)));
+  const originals=reference?[...reference.values()].filter(e=>!keys.has(tableKey(e))).map(e=>({e,i:null,staged:false})):[];
+  const filtered=[...staged,...originals].filter(({e})=>
    [e.file,e.pair,e.time,locations.get(e.file)||"",referenceFor(e)?.location||""]
     .join(" ").toLowerCase().includes(q));
-  count.textContent=filtered.length+" of "+data.edits.length+" staged table override(s)";
-  if(!filtered.length)list.append(node("p","muted",q?"No matches.":"No table overrides yet. Add a table using your local reference IDs."));
-  for(const {e,i} of filtered){
+  listTitle.textContent=reference?"ENCOUNTER TABLES":"OVERRIDDEN TABLES";
+  count.textContent=filtered.length+" matching · "+data.edits.length+" staged · "+
+   (reference?originals.length+" original tables":"load reference.csv to browse originals");
+  if(!filtered.length)list.append(node("p","muted",q?"No matches.":"No table overrides yet. Add a table using local reference IDs."));
+  for(const {e,i,staged:hasEdit} of filtered.slice(0,listLimit)){
    const name=locations.get(e.file)||referenceFor(e)?.location;
    const title="File "+e.file+" · Pair "+e.pair+" · "+e.time+(name?" · "+name:"");
-   const row=btn(title,()=>selectTable(i),"trainer-list-item searing-list-item"+(selected===i?" active":""));
-   const subtitle=node("small","muted",(e.slots||[]).length+" species/form changes · "+(e.rates||[]).length+" rate changes");
+   const active=hasEdit?selected===i: selected===null&&working?.file===e.file&&working?.pair===e.pair&&working?.time===e.time;
+   const row=btn(title,()=>hasEdit?selectTable(i):chooseReference(e),
+    "trainer-list-item searing-list-item"+(active?" active":""));
+   const subtitle=node("small","muted",hasEdit
+    ?(e.slots||[]).length+" species/form changes · "+(e.rates||[]).length+" rate changes"
+    :"Original table · click to create sparse override");
    row.append(subtitle);list.append(row);
   }
+  more.hidden=filtered.length<=listLimit;
  }
  function write(next,message){
   const text=serializeChanges(next);
@@ -122,13 +140,13 @@ export async function searingSunEncounterPage(api,root){
  }
  if(!data.edits.length)resetDraft();
  else resetDraft();
- search.oninput=renderList;
+ search.oninput=()=>{listLimit=100;renderList()};
  fileChooser.onchange=async event=>{
   const file=event.target.files?.[0];
   event.target.value="";
   if(!file)return;
   try{
-   reference=readReferenceCsv(await file.text());
+   reference=readReferenceCsv(await file.text());listLimit=100;
    refSummary.textContent=reference.size.toLocaleString()+" local day/night tables loaded";
    setNote("Loaded the reference from this PC only. No encounter archive or CSV was uploaded.");
    renderList();renderDetail();
