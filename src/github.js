@@ -10,7 +10,19 @@ export class GitHubWorkspace{
  async request(path,opts={}){
   const headers={"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...opts.headers};
   if(this.token)headers.Authorization="Bearer "+this.token;
-  const response=await fetch(API+path,{...opts,headers,cache:"no-store"});
+  let response=await fetch(API+path,{...opts,headers,cache:"no-store"});
+  // Fine-grained tokens can only see their selected repositories. If the user
+  // switches from Brisk to another public project without updating their
+  // token scope, retry read-only requests anonymously rather than treating
+  // the public repository as missing. Writes always retain authentication.
+  if(!response.ok&&this.token&&[403,404].includes(response.status)&&
+     (!opts.method||opts.method.toUpperCase()==="GET")){
+   const publicHeaders={...headers};delete publicHeaders.Authorization;
+   try{
+    const retry=await fetch(API+path,{...opts,headers:publicHeaders,cache:"no-store"});
+    if(retry.ok)response=retry;
+   }catch{}
+  }
   if(!response.ok){let message;try{const err=await response.json();message=err.message}catch{}throw Error("GitHub "+response.status+": "+(message||response.statusText))}
   return response.status===204?{}:await response.json();
  }
