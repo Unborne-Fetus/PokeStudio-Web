@@ -16,8 +16,18 @@ export class GitHubWorkspace{
  }
  async connect(repo,branch=""){
   if(!/^[\w.-]+\/[\w.-]+$/.test(repo))throw Error("Repository must be owner/name");
-  const meta=await this.request("/repos/"+repo);this.repo=repo;this.branch=branch||meta.default_branch;
-  await this.refresh();return this;
+  // Validate the new branch and its tree before replacing the active workspace.
+  // An invalid repo, branch, or expired token must not leave old loaded files
+  // accidentally associated with a different repository.
+  const meta=await this.request("/repos/"+repo);
+  const targetBranch=branch||meta.default_branch;
+  const ref=await this.request("/repos/"+repo+"/git/ref/heads/"+pathEncode(targetBranch));
+  const head=ref.object.sha;
+  const tree=await this.request("/repos/"+repo+"/git/trees/"+encodeURIComponent(head)+"?recursive=1");
+  this.repo=repo;this.branch=targetBranch;this.head=head;
+  this.tree=(tree.tree||[]).filter(item=>item.type==="blob").map(item=>({path:item.path,sha:item.sha,size:item.size||0}));
+  this.truncated=Boolean(tree.truncated);
+  return this;
  }
  async refresh(){
   if(!this.repo)throw Error("No repository connected");
