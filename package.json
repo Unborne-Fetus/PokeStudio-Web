@@ -2,6 +2,9 @@
   "name": "pokestudio-web",
   "version": "0.2.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "description": "Browser-first pokeemerald-expansion IDE",
   "scripts": {
