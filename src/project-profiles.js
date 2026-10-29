@@ -7,7 +7,7 @@ export const PROJECT_PRESETS=[
 export const PROJECT_PROFILES={
  emerald:{
   id:"emerald",name:"pokeemerald-expansion",description:"GBA source project · maps, trainers, Pokémon, Pokédex and wild encounters",
-  views:["code","map","trainers","pokemon","pokedex","encounters","data","sprites","changes"],
+  views:["code","ai","map","trainers","pokemon","pokedex","encounters","data","sprites","changes"],
   encounterLabel:"◈ Encounters",quick:[
    {label:"🗺 Maps",path:"data/maps/"},
    {label:"🌿 Wild encounters",path:"src/data/wild_encounters.json"},
@@ -20,7 +20,7 @@ export const PROJECT_PROFILES={
  },
  searing:{
   id:"searing",name:"USUM / pk3DS patch project",description:"3DS patch-based project · edit sparse wild encounters and source/JSON files",
-  views:["code","encounters","data","changes"],encounterLabel:"◈ Gen 7 Encounters",
+  views:["code","ai","encounters","data","changes"],encounterLabel:"◈ Gen 7 Encounters",
   quick:[
    {label:"🌿 Gen 7 encounters",view:"encounters"},
    {label:"📝 Encounter overrides",path:"data/encounters/changes.json"},
@@ -31,7 +31,7 @@ export const PROJECT_PROFILES={
  },
  generic:{
   id:"generic",name:"General source project",description:"GitHub source workspace · text files, JSON inspector, review and commits",
-  views:["code","data","changes"],encounterLabel:"◈ Encounters",
+  views:["code","ai","data","changes"],encounterLabel:"◈ Encounters",
   quick:[{label:"📄 Project README",path:"README.md"},{label:"📁 Browse data",path:"data/"},{label:"⚙ Config",path:"config/"}],
   canPlayWebEmu:false
  }
