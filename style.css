@@ -388,3 +388,21 @@ input::placeholder{color:#a991a1}
  #sidebar{top:0;bottom:0;height:auto}
  #footer{flex:0 0 25px}
 }
+
+/* AI Project Editor: compact editor form with read-only source previews. */
+.ai-layout{display:grid;grid-template-columns:minmax(270px,360px) minmax(0,1fr);gap:16px;align-items:start}
+.ai-layout .panel{min-width:0}
+.ai-layout .form-field textarea{width:100%;resize:vertical;font:12px/1.55 ui-monospace,Consolas,monospace}
+.ai-preview-summary{color:var(--accent);font-size:12px;white-space:pre-wrap;margin-bottom:12px}
+.ai-file-preview{border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.ai-file-preview>summary{cursor:pointer;background:#392536;padding:10px 12px;overflow-wrap:anywhere}
+.ai-file-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:10px}
+.ai-file-compare>div{min-width:0}
+.ai-file-compare h4{margin:0 0 5px;font-size:11px}
+.ai-file-compare pre,.ai-operation pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;background:#1a1520;border:1px solid var(--line);border-radius:6px;padding:10px;font:11px/1.5 ui-monospace,monospace}
+.ai-operation{padding:10px;border-top:1px solid var(--line)}
+.ai-operation strong{display:block;overflow-wrap:anywhere}
+.ai-operation .ai-removal{color:#ffb0bc}
+.ai-operation .ai-addition{color:#eed0a1}
+@media(max-width:1050px){.ai-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.ai-file-compare{grid-template-columns:minmax(0,1fr)}}

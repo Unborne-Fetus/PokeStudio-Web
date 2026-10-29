@@ -1,0 +1,7 @@
+name = "pokestudio-ai-level2"
+main = "ai-worker.js"
+compatibility_date = "2026-10-29"
+
+[vars]
+ALLOWED_ORIGIN = "https://unborne-fetus.github.io"
+AI_MODEL = "gpt-4.1-mini"

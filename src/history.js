@@ -18,8 +18,25 @@ export class EditHistory {
   }
   this.future.length=0;return true
  }
- undo(){const item=this.past.pop();if(item)this.future.push(item);return item?{path:item.path,value:copy(item.before)}:null}
- redo(){const item=this.future.pop();if(item)this.past.push(item);return item?{path:item.path,value:copy(item.after)}:null}
+ recordBatch(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const batch=changes.filter(edit=>!same(edit.before,edit.after)).map(edit=>({path:edit.path,before:copy(edit.before),after:copy(edit.after)}));
+  if(!batch.length)return false;
+  if(new Set(batch.map(edit=>edit.path)).size!==batch.length)throw Error("Duplicate paths in history batch.");
+  this.past.push({batch,time:Date.now(),typing:false});
+  if(this.past.length>this.limit)this.past.shift();
+  this.future.length=0;return true;
+ }
+ undo(){
+  const item=this.past.pop();if(item)this.future.push(item);
+  if(!item)return null;
+  return item.batch?{batch:item.batch.map(edit=>({path:edit.path,value:copy(edit.before)}))}:{path:item.path,value:copy(item.before)};
+ }
+ redo(){
+  const item=this.future.pop();if(item)this.past.push(item);
+  if(!item)return null;
+  return item.batch?{batch:item.batch.map(edit=>({path:edit.path,value:copy(edit.after)}))}:{path:item.path,value:copy(item.after)};
+ }
  clear(){this.past.length=0;this.future.length=0}
  get canUndo(){return this.past.length>0}
  get canRedo(){return this.future.length>0}

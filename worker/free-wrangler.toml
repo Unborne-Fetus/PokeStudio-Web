@@ -1,0 +1,17 @@
+name = "pokestudio-ai-free"
+main = "free-worker.js"
+compatibility_date = "2026-10-29"
+
+[vars]
+ALLOWED_ORIGIN = "https://unborne-fetus.github.io"
+
+[ai]
+binding = "AI"
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+[ratelimits.simple]
+limit = 3
+period = 60

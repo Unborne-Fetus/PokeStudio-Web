@@ -1,0 +1,127 @@
+import {textPath} from "./github.js";
+
+export const AI_MAX_FILES=4;
+export const AI_MAX_FILE_CHARS=14000;
+export const AI_MAX_PROJECT_FILE_CHARS=1500000;
+const AI_MAX_EDITS=32;
+
+const words=value=>String(value||"").toLowerCase().match(/[a-z0-9_]+/g)||[];
+export function editableAIPath(path){
+ if(typeof path!=="string"||!textPath(path)||path.length>300||path.includes("\\")||path.startsWith("/"))return false;
+ const segments=path.toLowerCase().split("/");
+ if(segments.some(p=>p==="."||p===".."||p===".git"||p===".github"||p==="node_modules"))return false;
+ const name=segments.at(-1);
+ if(name.startsWith(".env")||/^(?:package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$/i.test(name))return false;
+ if(/(?:secret|credential|private[_-]?key|api[_-]?key|auth[_-]?token)/i.test(name))return false;
+ return true;
+}
+
+export function candidatePaths(paths,instruction,currentPath=null,limit=240){
+ const keys=new Set(words(instruction).filter(word=>word.length>2));
+ return [...new Set(paths)].filter(path=>editableAIPath(path))
+  .map(path=>{
+   const lower=path.toLowerCase(),parts=new Set(words(path));
+   let score=path===currentPath?100:0;
+   for(const key of keys)if(parts.has(key))score+=10;else if(lower.includes(key))score+=3;
+   if(lower==="readme.md"||lower.endsWith("/readme.md"))score-=8;
+   return {path,score};
+  }).sort((a,b)=>b.score-a.score||a.path.localeCompare(b.path)).slice(0,limit).map(v=>v.path);
+}
+
+const COMMON=new Set(["make","change","edit","update","pokemon","pokémon","ability","level","levels","trainer","trainers","source","file","files","this","that","with","from","into","them","their","have","should","will","please","include","increase","decrease","every","would","like","want"]);
+export function contextualSource(value,instruction,maxChars=AI_MAX_FILE_CHARS){
+ if(!Number.isInteger(maxChars)||maxChars<1000||maxChars>AI_MAX_FILE_CHARS)throw Error("Invalid AI context size.");
+ if(typeof value!=="string"||value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error("Source file is beyond the AI editor's size limit.");
+ if(value.length<=maxChars)return value;
+ const terms=[...new Set(words(instruction).filter(key=>key.length>=4&&!COMMON.has(key)))];
+ if(!terms.length)throw Error("This file is large. Mention a specific trainer, species, ability, ID or source phrase to identify the section to edit.");
+ let bestScore=0,bestIndex=-1,offset=0;
+ for(const line of value.split("\n")){
+  const lower=line.toLowerCase();
+  let score=0;
+  for(const term of terms)if(lower.includes(term))score+=term.length>=8?5:3;
+  if(score>0&&/^(?:===|\s*\[|\s*#define|\s*\.)/.test(line))score+=2;
+  if(score>bestScore){bestScore=score;bestIndex=offset+Math.floor(line.length/2)}
+  offset+=line.length+1;
+ }
+ if(bestScore<3||bestIndex<0)throw Error("Could not identify the requested section in this large file. Supply its exact name or identifier.");
+ const size=maxChars;
+ let start=Math.max(0,bestIndex-Math.floor(size/2)),end=Math.min(value.length,start+size);
+ start=Math.max(0,end-size);
+ return value.slice(start,end);
+}
+
+export function selectFiles(response,offered){
+ if(!response||!Array.isArray(response.files))throw Error("AI did not return a list of files.");
+ const allowed=new Set(offered),paths=[...new Set(response.files)];
+ if(!paths.length||paths.length>AI_MAX_FILES||paths.some(p=>typeof p!=="string"||!allowed.has(p)))throw Error("AI selected unsupported files. Choose paths explicitly and try again.");
+ return paths;
+}
+
+export function validateEndpoint(value){
+ let url;
+ try{url=new URL(String(value||"").trim())}catch{throw Error("Enter a valid AI gateway URL in settings.")}
+ const localhost=["localhost","127.0.0.1","[::1]"].includes(url.hostname);
+ if((url.protocol!=="https:"&&!(url.protocol==="http:"&&localhost))||url.username||url.password||url.hash)throw Error("AI gateway must be HTTPS (or localhost for development), without credentials in its URL.");
+ return url.href;
+}
+
+export function prepareProposal(response,sourceFiles){
+ if(!response||!Array.isArray(response.edits))throw Error("AI returned no structured edits.");
+ if(!response.edits.length||response.edits.length>AI_MAX_EDITS)throw Error("AI returned an unsupported number of edits.");
+ const originals=new Map();
+ for(const file of sourceFiles){
+  if(!file||!editableAIPath(file.path)||typeof file.value!=="string"||file.value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error("Unsupported or oversized source file.");
+  if(originals.has(file.path))throw Error("Duplicate source path.");
+  originals.set(file.path,file.value);
+ }
+ if(originals.size>AI_MAX_FILES)throw Error("Too many source files.");
+ const modified=new Map(originals);
+ for(const edit of response.edits){
+  if(!edit||typeof edit.path!=="string"||!modified.has(edit.path)||typeof edit.find!=="string"||typeof edit.replace!=="string")throw Error("AI edit has an unsupported path or operation.");
+  if(edit.find.length===0||edit.find.length>8000||edit.replace.length>12000)throw Error("AI edit exceeds safety limits.");
+  const value=modified.get(edit.path);
+  const index=value.indexOf(edit.find);
+  if(index<0)throw Error("AI search text was not found in "+edit.path+". No changes were applied.");
+  if(value.indexOf(edit.find,index+edit.find.length)!==-1)throw Error("AI edit is ambiguous in "+edit.path+"; matching text occurs multiple times.");
+  const updated=value.slice(0,index)+edit.replace+value.slice(index+edit.find.length);
+  if(updated.length>AI_MAX_PROJECT_FILE_CHARS+12000)throw Error("Proposed file is too large.");
+  modified.set(edit.path,updated);
+ }
+ const changes=[];
+ for(const [path,after] of modified){
+  const before=originals.get(path);
+  if(after===before)continue;
+  if(path.endsWith(".json"))try{JSON.parse(after)}catch(error){throw Error("AI produced invalid JSON in "+path+": "+error.message)}
+  changes.push({path,before,after});
+ }
+ if(!changes.length)throw Error("AI proposal makes no changes.");
+ return {summary:typeof response.summary==="string"?response.summary.slice(0,800):"Proposed source changes",changes,operations:response.edits.length};
+}
+
+export function assertUnchanged(proposal,lookup){
+ if(!proposal||!Array.isArray(proposal.changes))throw Error("No staged changes to validate.");
+ for(const change of proposal.changes){
+  const existing=lookup(change.path);
+  if(!existing||existing.isBinary||existing.value!==change.before)throw Error("Source changed since the AI proposal: "+change.path+". Regenerate the proposal before applying.");
+ }
+ return true;
+}
+
+export async function callGateway(endpoint,token,payload,fetcher=fetch){
+ const url=validateEndpoint(endpoint);
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),60000);
+ try{
+  const headers={"Content-Type":"application/json"};
+  if(token)headers["X-PokeStudio-Access"]=token;
+  const response=await fetcher(url,{method:"POST",headers,body:JSON.stringify(payload),signal:controller.signal,cache:"no-store"});
+  if(!response.ok){
+   let message="HTTP "+response.status;
+   try{const error=await response.json();if(typeof error.error==="string")message=error.error.slice(0,250)}catch{}
+   throw Error("AI gateway: "+message);
+  }
+  return await response.json();
+ }catch(error){if(error.name==="AbortError")throw Error("AI request timed out; no edits were applied.");throw error}
+ finally{clearTimeout(timer)}
+}
