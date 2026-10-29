@@ -10,6 +10,11 @@ const el=(tag,cls="",value)=>{
  if(value!==undefined)node.textContent=value;return node;
 };
 function err(node,error){node.className="warn";node.textContent=String(error?.message||error)}
+function around(value,position){
+ if(value.length<=9000)return value;
+ const start=Math.max(0,position-300),end=Math.min(value.length,start+8500);
+ return (start?"… preceding source omitted …\n":"")+value.slice(start,end)+(end<value.length?"\n… remaining source omitted …":"");
+}
 function downloadProposal(changes){
  const url=URL.createObjectURL(createZip(changes.map(x=>({path:x.path,value:x.after}))));
  const a=el("a");a.href=url;a.download="Pokestudio-AI-feature-proposal.zip";document.body.append(a);a.click();a.remove();
@@ -48,9 +53,21 @@ export function developerPage(api,root){
   for(const change of staged.changes){
    const detail=el("details","ai-file-preview");detail.append(el("summary","",change.path+(change.created?" · new file":" · modified")));
    const grid=el("div","ai-file-compare"),before=el("div"),after=el("div");
-   before.append(el("h4","","Before"),el("pre","",change.created?"(new file)":change.before.slice(0,9000)));
-   after.append(el("h4","","After"),el("pre","",change.after.slice(0,9000)));
+   let first=0;
+   if(!change.created)while(first<Math.min(change.before.length,change.after.length)&&change.before[first]===change.after[first])first++;
+   before.append(el("h4","","Before · affected source"),el("pre","",change.created?"(new file)":around(change.before,first)));
+   after.append(el("h4","","After · affected source"),el("pre","",around(change.after,first)));
    grid.append(before,after);detail.append(grid);detail.open=staged.changes.length===1;review.append(detail);
+  }
+  if(staged.operations?.length){
+   const ops=el("details","ai-file-preview");
+   ops.append(el("summary","","Review exact find/replace operations ("+staged.operations.length+")"));
+   for(const op of staged.operations){
+    const block=el("div","ai-operation");
+    block.append(el("strong","",op.path),el("pre","ai-removal","− "+op.find),el("pre","ai-addition","+ "+op.replace));
+    ops.append(block);
+   }
+   ops.open=true;review.append(ops);
   }
   setBusy(false);
  }
@@ -85,7 +102,7 @@ export function developerPage(api,root){
     context.push({path,value:contextualSource(file.value,prompt.value,2400)});
    }
    const answer=await callLocalAI({phase:"develop",instruction:prompt.value,files:context},{modelId:model.value,onProgress:text=>progress.textContent=text});
-   staged=prepareDeveloperProposal(answer,sources,known);gh=instance;
+   staged={...prepareDeveloperProposal(answer,sources,known),operations:answer.edits};gh=instance;
    progress.textContent="Feature proposal ready. Review the complete diff and export it before publishing.";
    display();
   }catch(error){staged=null;setBusy(false);err(progress,error)}
