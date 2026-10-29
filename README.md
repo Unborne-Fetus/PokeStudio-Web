@@ -135,3 +135,20 @@ The gateway intentionally fails closed if authentication or the allowed origin h
 The AI cannot establish whether modified game code builds or runs correctly. Inspect the diff, run repository checks, and test the ROM before treating generated changes as complete. Models sometimes choose the wrong files or produce replacements that cannot be safely applied; the UI reports these failures rather than applying guesses.
 
 Level 3 (AI modifying PokéStudio Web itself through isolated branches, CI, and pull request reviews) is deliberately deferred until Level 2 has passed tests and hands-on usage.
+
+## Free Level 2 AI (no subscription required)
+
+**Local browser AI is the default.** The AI Project Editor now lazily imports pinned WebLLM 0.2.86 and can use Qwen 2.5 Coder models (0.5B / 1.5B / 3B) entirely in the visitor's browser. Model downloads are large and cached by the browser; WebGPU, a secure context, and sufficient graphics memory are required. There is no inference API key and no provider receives your project source in local mode. Supported requests produce reviewable exact-match source replacements; the user must approve, and all changes stay local until explicitly committed.
+
+**Optional free cloud fallback.** This is *not automatically available* without owner deployment: it requires a Cloudflare account and a Turnstile site key/secret. The free-worker code uses the Workers AI binding (`@cf/meta/llama-3.2-3b-instruct`) and a per-client Cloudflare Rate Limiting binding, with mandatory server-verified Turnstile challenges. The free quota is finite and model quality is limited; there is no guaranteed unlimited access. On Workers Free, quota exhaustion rejects requests rather than charging; using paid Worker billing changes cost exposure.
+
+Deployment (owner only):
+
+1. In the Cloudflare dashboard, create a Turnstile widget for the hosted PokéStudio domain (`unborne-fetus.github.io`); configure its action as `pokestudio-ai`. Copy its **public site key** and keep the **secret** private.
+2. From `worker/`, deploy `free-worker.js` with the separate `free-wrangler.toml` configuration (e.g. `npx wrangler deploy -c free-wrangler.toml`). This requires an owner-operated Cloudflare account. Configure `TURNSTILE_SECRET_KEY` with `npx wrangler secret put TURNSTILE_SECRET_KEY -c free-wrangler.toml`. The Worker deliberately refuses inference until its AI binding, rate limiter and secret are configured.
+3. Edit `src/ai-config.js` with the deployed **public** worker URL and **public** Turnstile site key. **Never commit a Cloudflare/OpenAI API key, Turnstile secret, or GitHub token.** The free cloud mode is disabled automatically if these public settings are blank.
+4. Test actual project edits and free quota exhaustion before opening cloud mode to visitors. Keep the Cloudflare account on the Free plan or explicitly configure spending restrictions. Check the Workers AI dashboard for quota usage; 10,000 daily free neurons are a shared limit, not a promise of a particular number of edits.
+
+Cloud fallback is **opt-in**, not automatic: users consent before sending selected file excerpts to the Worker. Local inference has a lower source context window, so narrower project requests will perform better. The small local and cloud models cannot reliably implement large cross-file game mechanics without human review and gameplay/build testing.
+
+**Security note:** The Workers Rate Limiting binding is approximate and per location; it does not create a strict global daily spending cap. The fallback is intended for an account held on the no-overage Workers Free tier. For rigorous financial protection when upgrading Workers, add an account-level spending cap or strict global metering before enabling public access.
