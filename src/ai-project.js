@@ -29,9 +29,10 @@ export function candidatePaths(paths,instruction,currentPath=null,limit=240){
 }
 
 const COMMON=new Set(["make","change","edit","update","pokemon","pokémon","ability","level","levels","trainer","trainers","source","file","files","this","that","with","from","into","them","their","have","should","will","please","include","increase","decrease","every","would","like","want"]);
-export function contextualSource(value,instruction){
+export function contextualSource(value,instruction,maxChars=AI_MAX_FILE_CHARS){
+ if(!Number.isInteger(maxChars)||maxChars<1000||maxChars>AI_MAX_FILE_CHARS)throw Error("Invalid AI context size.");
  if(typeof value!=="string"||value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error("Source file is beyond the AI editor's size limit.");
- if(value.length<=AI_MAX_FILE_CHARS)return value;
+ if(value.length<=maxChars)return value;
  const terms=[...new Set(words(instruction).filter(key=>key.length>=4&&!COMMON.has(key)))];
  if(!terms.length)throw Error("This file is large. Mention a specific trainer, species, ability, ID or source phrase to identify the section to edit.");
  let bestScore=0,bestIndex=-1,offset=0;
@@ -44,7 +45,7 @@ export function contextualSource(value,instruction){
   offset+=line.length+1;
  }
  if(bestScore<3||bestIndex<0)throw Error("Could not identify the requested section in this large file. Supply its exact name or identifier.");
- const size=AI_MAX_FILE_CHARS;
+ const size=maxChars;
  let start=Math.max(0,bestIndex-Math.floor(size/2)),end=Math.min(value.length,start+size);
  start=Math.max(0,end-size);
  return value.slice(start,end);
