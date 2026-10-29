@@ -32,7 +32,7 @@ test("free cloud client checks HTTPS and includes Turnstile token only on the ex
  await callFreeCloud("https://ai.example.workers.dev","test-token",{phase:"edit",instruction:"rename",files:[]},fetcher);
  assert.equal(sent.options.method,"POST");
  assert.equal(JSON.parse(sent.options.body).turnstileToken,"test-token");
- assert.throws(()=>callFreeCloud("https://example.org",null,{phase:"edit"}),/verification/i);
+ await assert.rejects(()=>callFreeCloud("https://example.org",null,{phase:"edit"}),/verification/i);
 });
 test("free cloud worker rejects missing configuration and unverified challenges",async()=>{
  const origin="https://unborne-fetus.github.io";
