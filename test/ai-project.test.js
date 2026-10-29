@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {editableAIPath,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "../src/ai-project.js";
+import {editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "../src/ai-project.js";
 import {EditHistory} from "../src/history.js";
 import worker from "../worker/ai-worker.js";
 
@@ -71,4 +71,17 @@ test("AI refuses GitHub Actions, credential and package execution configuration 
   assert.equal(editableAIPath(path),false,path);
  assert.equal(editableAIPath("src/data/wild_encounters.json"),true);
  assert.throws(()=>prepareProposal({edits:[{path:".github/workflows/build.yml",find:"x",replace:"y"}]},[{path:".github/workflows/build.yml",value:"x"}]),/Unsupported/);
+});
+
+test("large trainer files are reduced to relevant source context without losing original patch target",()=>{
+ const prefix="=== TRAINER_OTHER ===\nName: OTHER\n"+("Move: Tackle\n".repeat(2100));
+ const section="=== TRAINER_MAY_WEATHER_INSTITUTE ===\nName: MAY\nLevel: 60\n";
+ const textFile=prefix+section+("Move: Growl\n".repeat(1200));
+ const excerpt=contextualSource(textFile,"Set TRAINER_MAY_WEATHER_INSTITUTE to level 70");
+ assert.ok(excerpt.length<=14000);
+ assert.ok(excerpt.includes(section));
+ const proposal=prepareProposal({edits:[{path:"src/data/trainers.party",find:"=== TRAINER_MAY_WEATHER_INSTITUTE ===\nName: MAY\nLevel: 60",replace:"=== TRAINER_MAY_WEATHER_INSTITUTE ===\nName: MAY\nLevel: 70"}]},
+  [{path:"src/data/trainers.party",value:textFile}]);
+ assert.ok(proposal.changes[0].after.includes("Level: 70"));
+ assert.equal(proposal.changes[0].before,textFile);
 });
