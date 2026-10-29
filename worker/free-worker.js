@@ -2,7 +2,7 @@
  * Production requires Cloudflare free plan, Turnstile validation and a rate-limit binding.
  * No anonymous, unauthenticated inference endpoint is exposed. */
 import {editableAIPath} from "../src/ai-project.js";
-import {prompts} from "../src/ai-local.js";
+import {prompts} from "../src/ai-prompts.js";
 
 const reply=(data,status,origin)=>new Response(JSON.stringify(data),{status,headers:{
  "Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin",
