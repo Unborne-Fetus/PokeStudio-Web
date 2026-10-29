@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "../src/ai-project.js";
+import {editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,assertUnchanged,validateEndpoint,callGateway} from "../src/ai-project.js";
 import {EditHistory} from "../src/history.js";
 import worker from "../worker/ai-worker.js";
 
@@ -84,4 +84,29 @@ test("large trainer files are reduced to relevant source context without losing 
   [{path:"src/data/trainers.party",value:textFile}]);
  assert.ok(proposal.changes[0].after.includes("Level: 70"));
  assert.equal(proposal.changes[0].before,textFile);
+});
+
+test("stale or missing source files block review approval",()=>{
+ const staged={changes:[{path:"map.json",before:"{}",after:'{"x":1}'}]};
+ assert.equal(assertUnchanged(staged,path=>({path,value:"{}"})),true);
+ assert.throws(()=>assertUnchanged(staged,()=>({value:'{"x":2}'})),/changed since/);
+ assert.throws(()=>assertUnchanged(staged,()=>null),/changed since/);
+});
+test("worker only forwards authorized structured requests to the model, not its access token",async()=>{
+ const env={ALLOWED_ORIGIN:"https://unborne-fetus.github.io",OPENAI_API_KEY:"test-model-key",STUDIO_ACCESS_TOKEN:"unique-access-token"};
+ const original=globalThis.fetch;let upstream;
+ globalThis.fetch=async(url,options)=>{
+  upstream={url,options};
+  return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({files:["a.json"]})}}]})};
+ };
+ try{
+  const req=new Request("https://example.workers.dev",{method:"POST",headers:{"Origin":env.ALLOWED_ORIGIN,"Content-Type":"application/json","X-PokeStudio-Access":env.STUDIO_ACCESS_TOKEN},
+   body:JSON.stringify({phase:"select",instruction:"Change a value",paths:["a.json"]})});
+  const result=await worker.fetch(req,env);
+  assert.equal(result.status,200);
+  assert.deepEqual(await result.json(),{files:["a.json"]});
+  assert.equal(upstream.url,"https://api.openai.com/v1/chat/completions");
+  assert.equal(upstream.options.headers.Authorization,"Bearer test-model-key");
+  assert.equal(upstream.options.body.includes(env.STUDIO_ACCESS_TOKEN),false);
+ }finally{globalThis.fetch=original}
 });
