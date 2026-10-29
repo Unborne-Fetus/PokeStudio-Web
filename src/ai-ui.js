@@ -1,8 +1,12 @@
 import {AI_MAX_FILE_CHARS,AI_MAX_PROJECT_FILE_CHARS,AI_MAX_FILES,editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,assertUnchanged,validateEndpoint,callGateway} from "./ai-project.js";
+import {LOCAL_MODELS,browserAIAvailable,callLocalAI} from "./ai-local.js";
+import {FREE_AI_GATEWAY_URL,TURNSTILE_SITE_KEY} from "./ai-config.js";
+import {requestChallenge,callFreeCloud} from "./ai-cloud.js";
 
 let gatewayUrl="";
 let gatewayAccess="";
 let savedInstruction="";
+let selectedBackend="local",selectedModel=LOCAL_MODELS[1].id;
 
 const el=(tag,className="",label)=>{
  const node=document.createElement(tag);
@@ -32,11 +36,35 @@ export function aiPage(api,root){
  const layout=el("div","ai-layout"),form=el("section","panel"),preview=el("section","panel");
  layout.append(form,preview);root.append(layout);
 
- const gateway=field("AI gateway URL (HTTPS)",gatewayUrl,"https://your-worker.example.workers.dev");
+ const backend=el("label","form-field"),backendCaption=el("span","","AI engine"),backendSelect=el("select");
+ for(const [value,label] of [["local","Free · browser AI (no key)"],["cloud","Free · cloud fallback (if configured)"],["private","Private · owner-operated gateway"]]){
+  const option=el("option","",label);option.value=value;
+  if(value==="cloud"&&(!FREE_AI_GATEWAY_URL||!TURNSTILE_SITE_KEY))option.disabled=true;
+  backendSelect.append(option);
+ }
+ backendSelect.value=selectedBackend;
+ if(backendSelect.selectedIndex<0){selectedBackend="local";backendSelect.value="local"}
+ backend.append(backendCaption,backendSelect);form.append(backend);
+ const modelField=el("label","form-field"),modelCaption=el("span","","Browser model"),modelSelect=el("select");
+ for(const model of LOCAL_MODELS){const option=el("option","",model.label);option.value=model.id;modelSelect.append(option)}
+ modelSelect.value=selectedModel;modelSelect.onchange=()=>{selectedModel=modelSelect.value};
+ modelField.append(modelCaption,modelSelect);form.append(modelField);
+ const engineNote=el("p","muted",""),challengeSlot=el("div","ai-challenge");
+ const gateway=field("Private gateway URL (HTTPS)",gatewayUrl,"https://your-worker.example.workers.dev");
  const access=field("AI gateway access token (kept in this tab only)",gatewayAccess,"Gateway access token",true);
  gateway.input.oninput=()=>gatewayUrl=gateway.input.value.trim();
  access.input.oninput=()=>gatewayAccess=access.input.value;
- form.append(gateway.wrapper,access.wrapper);
+ form.append(gateway.wrapper,access.wrapper,engineNote,challengeSlot);
+ function syncBackend(){
+  selectedBackend=backendSelect.value;
+  modelField.hidden=selectedBackend!=="local";
+  gateway.wrapper.hidden=access.wrapper.hidden=selectedBackend!=="private";
+  engineNote.textContent=selectedBackend==="local"
+   ?(browserAIAvailable()?"Runs on your GPU; downloads and caches a large model on first use. No project source goes to an inference provider.":"WebGPU not available on this device. Use a supported secure browser or enable the optional free cloud gateway.")
+   :selectedBackend==="cloud"?"Cloudflare's free allocation is limited. A fresh anti-abuse check is required, and only one request is sent; source text leaves this browser."
+   :"Owner-operated gateway; model charges may apply. Source text is sent only with consent.";
+ }
+ backendSelect.onchange=syncBackend;syncBackend();
  const requestLabel=el("label","form-field");
  const requestText=el("span","","Describe your project change"),prompt=el("textarea");
  prompt.rows=6;prompt.maxLength=2000;prompt.placeholder="Example: Change this route's wild encounter rate to 10 and keep all slots.";prompt.value=savedInstruction;
@@ -50,7 +78,8 @@ export function aiPage(api,root){
 
  const consent=el("label","form-check"),check=el("input");
  check.type="checkbox";
- consent.append(check,document.createTextNode("I understand selected file contents and my request are sent to the configured AI gateway."));
+ const consentText=document.createTextNode("I agree to send the selected source text and my request to the chosen AI service.");
+ consent.append(check,consentText);
  form.append(consent);
  const controls=el("div","panel-actions"),generate=el("button","btn primary","Generate proposed edits");
  generate.type="button";controls.append(generate);form.append(controls);
@@ -91,9 +120,15 @@ export function aiPage(api,root){
   staged=null;apply.disabled=true;summary.textContent="";previewItems.replaceChildren();
   const instruction=prompt.value.trim();
   if(!instruction)return showError(progress,Error("Describe the project change first."));
-  if(!check.checked)return showError(progress,Error("Consent is required before source text is sent to a gateway."));
-  let endpoint;
-  try{endpoint=validateEndpoint(gateway.input.value)}catch(error){return showError(progress,error)}
+  const mode=backendSelect.value;
+  if(mode!=="local"&&!check.checked)return showError(progress,Error("Consent is required before source text is sent to a cloud service."));
+  let endpoint="";
+  try{if(mode==="private")endpoint=validateEndpoint(gateway.input.value);
+   if(mode==="cloud")endpoint=validateEndpoint(FREE_AI_GATEWAY_URL);
+   if(mode==="local"&&!browserAIAvailable())throw Error("This browser cannot run WebGPU AI. Use a compatible device or a configured free cloud option.");
+  }catch(error){return showError(progress,error)}
+  const generateAI=(payload)=>mode==="local"?callLocalAI(payload,{modelId:modelSelect.value,onProgress:text=>progress.textContent=text}):
+   callGateway(endpoint,access.input.value,payload);
   setBusy(true);progress.className="muted";
   try{
    const known=api.paths().filter(path=>!path.startsWith(".git/"));
@@ -105,8 +140,15 @@ export function aiPage(api,root){
     const candidates=candidatePaths(known,instruction,api.current()?.path);
     if(!candidates.length)throw Error("No editable project files were found.");
     progress.textContent="Choosing relevant source files…";
-    const result=await callGateway(endpoint,access.input.value,{phase:"select",instruction,paths:candidates,activePath:api.current()?.path||""});
-    selected=selectFiles(result,candidates);
+    if(mode==="cloud"){
+     // Free inference uses one Turnstile token per request; choose locally to avoid
+     // sending the entire repository index or spending a second quota request.
+     selected=candidates.slice(0,2);
+     progress.textContent="Using likely files: "+selected.join(", ")+". Enter explicit paths if these are incorrect.";
+    }else{
+     const result=await generateAI({phase:"select",instruction,paths:candidates.slice(0,mode==="local"?35:240),activePath:api.current()?.path||""});
+     selected=selectFiles(result,candidates);
+    }
    }
    const sources=[],contexts=[];
    for(const path of selected){
@@ -114,14 +156,22 @@ export function aiPage(api,root){
     const file=await api.loadRaw(path);
     if(file.isBinary||typeof file.value!=="string"||file.value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error(path+" is binary or too large for safe AI editing (limit: "+AI_MAX_PROJECT_FILE_CHARS+" characters). Select a smaller source file.");
     sources.push({path,value:file.value});
-    contexts.push({path,value:contextualSource(file.value,instruction)});
+    contexts.push({path,value:contextualSource(file.value,instruction,mode==="local"?4800:mode==="cloud"?8000:AI_MAX_FILE_CHARS)});
    }
    progress.textContent="Generating exact replacements for "+selected.length+" file(s)…";
-   const result=await callGateway(endpoint,access.input.value,{phase:"edit",instruction,files:contexts});
+   let result;
+   if(mode==="cloud"){
+    if(contexts.length>2)throw Error("Free cloud accepts at most two files. Enter fewer paths.");
+    progress.textContent="Complete the free-cloud verification below…";
+    const challenge=await requestChallenge(challengeSlot,TURNSTILE_SITE_KEY);
+    try{progress.textContent="Requesting free cloud edits…";
+     result=await callFreeCloud(endpoint,challenge.token,{phase:"edit",instruction,files:contexts});
+    }finally{challenge.cleanup()}
+   }else result=await generateAI({phase:"edit",instruction,files:contexts});
    const proposal=prepareProposal(result,sources);
    staged=proposal;
    display(proposal,result.edits);
-   progress.textContent="Proposal ready. Expand and review the complete source changes before applying.";
+   progress.textContent="Proposal ready. Review all replacement operations before applying. No changes were committed.";
   }catch(error){showError(progress,error)}
   finally{setBusy(false)}
  };
