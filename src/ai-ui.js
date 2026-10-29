@@ -1,4 +1,4 @@
-import {AI_MAX_FILE_CHARS,AI_MAX_PROJECT_FILE_CHARS,AI_MAX_FILES,editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "./ai-project.js";
+import {AI_MAX_FILE_CHARS,AI_MAX_PROJECT_FILE_CHARS,AI_MAX_FILES,editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,assertUnchanged,validateEndpoint,callGateway} from "./ai-project.js";
 
 let gatewayUrl="";
 let gatewayAccess="";
@@ -128,11 +128,7 @@ export function aiPage(api,root){
  apply.onclick=()=>{
   if(!staged||busy)return;
   try{
-   // Verify the current staged source, even if another editor changed it while AI was working.
-   for(const change of staged.changes){
-    const rec=api.getFile(change.path);
-    if(!rec||rec.isBinary||rec.value!==change.before)throw Error("Source changed since the AI proposal: "+change.path+". Generate a new proposal to avoid overwriting other edits.");
-   }
+   assertUnchanged(staged,api.getFile);
    api.applyBatch(staged.changes);
    const number=staged.changes.length;
    staged=null;apply.disabled=true;previewItems.replaceChildren();
