@@ -1,4 +1,4 @@
-import {AI_MAX_FILE_CHARS,AI_MAX_FILES,editableAIPath,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "./ai-project.js";
+import {AI_MAX_FILE_CHARS,AI_MAX_PROJECT_FILE_CHARS,AI_MAX_FILES,editableAIPath,contextualSource,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "./ai-project.js";
 
 let gatewayUrl="";
 let gatewayAccess="";
@@ -19,6 +19,10 @@ function field(label,value,placeholder="",secret=false){
  return {wrapper,input};
 }
 function showError(node,error){node.textContent=error.message||String(error);node.className="warn";}
+function reviewExcerpt(value,first){
+ const start=Math.max(0,first-180),end=Math.min(value.length,first+6500);
+ return (start?"… previous source omitted …\n":"")+value.slice(start,end)+(end<value.length?"\n… remaining source omitted; open Changes to inspect …":"");
+}
 
 export function aiPage(api,root){
  root.replaceChildren();
@@ -66,8 +70,9 @@ export function aiPage(api,root){
    const header=el("summary","",change.path+" · "+change.before.length+" → "+change.after.length+" characters");
    section.append(header);
    const code=el("div","ai-file-compare"),before=el("div"),after=el("div");
-   before.append(el("h4","","Before"),el("pre","",change.before));
-   after.append(el("h4","","Proposed"),el("pre","",change.after));
+   let first=0;while(first<Math.min(change.before.length,change.after.length)&&change.before[first]===change.after[first])first++;
+   before.append(el("h4","","Before (affected source)"),el("pre","",reviewExcerpt(change.before,first)));
+   after.append(el("h4","","Proposed (affected source)"),el("pre","",reviewExcerpt(change.after,first)));
    code.append(before,after);section.append(code);previewItems.append(section);
   }
   const specific=el("details","ai-file-preview");
@@ -77,7 +82,7 @@ export function aiPage(api,root){
    line.append(el("strong","",op.path),el("pre","ai-removal","− "+op.find),el("pre","ai-addition","+ "+op.replace));
    specific.append(line);
   }
-  previewItems.append(specific);
+  previewItems.append(specific);specific.open=true;
   if(proposal.changes.length===1)previewItems.firstElementChild.open=true;
   apply.disabled=false;
  }
@@ -103,15 +108,16 @@ export function aiPage(api,root){
     const result=await callGateway(endpoint,access.input.value,{phase:"select",instruction,paths:candidates,activePath:api.current()?.path||""});
     selected=selectFiles(result,candidates);
    }
-   const sources=[];
+   const sources=[],contexts=[];
    for(const path of selected){
     progress.textContent="Loading "+path+"…";
     const file=await api.loadRaw(path);
-    if(file.isBinary||typeof file.value!=="string"||file.value.length>AI_MAX_FILE_CHARS)throw Error(path+" is binary or too large for safe AI editing (limit: "+AI_MAX_FILE_CHARS+" characters). Select smaller source files.");
+    if(file.isBinary||typeof file.value!=="string"||file.value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error(path+" is binary or too large for safe AI editing (limit: "+AI_MAX_PROJECT_FILE_CHARS+" characters). Select a smaller source file.");
     sources.push({path,value:file.value});
+    contexts.push({path,value:contextualSource(file.value,instruction)});
    }
    progress.textContent="Generating exact replacements for "+selected.length+" file(s)…";
-   const result=await callGateway(endpoint,access.input.value,{phase:"edit",instruction,files:sources});
+   const result=await callGateway(endpoint,access.input.value,{phase:"edit",instruction,files:contexts});
    const proposal=prepareProposal(result,sources);
    staged=proposal;
    display(proposal,result.edits);
