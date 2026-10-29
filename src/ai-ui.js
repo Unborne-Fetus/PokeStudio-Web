@@ -148,15 +148,17 @@ export function aiPage(api,root){
     }else{
      const result=await generateAI({phase:"select",instruction,paths:candidates.slice(0,mode==="local"?35:240),activePath:api.current()?.path||""});
      selected=selectFiles(result,candidates);
+    if(mode==="local")selected=selected.slice(0,2);
     }
    }
+   if((mode==="local"||mode==="cloud")&&selected.length>2)throw Error("Free AI supports up to two selected source files per request. Choose fewer paths.");
    const sources=[],contexts=[];
    for(const path of selected){
     progress.textContent="Loading "+path+"…";
     const file=await api.loadRaw(path);
     if(file.isBinary||typeof file.value!=="string"||file.value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error(path+" is binary or too large for safe AI editing (limit: "+AI_MAX_PROJECT_FILE_CHARS+" characters). Select a smaller source file.");
     sources.push({path,value:file.value});
-    contexts.push({path,value:contextualSource(file.value,instruction,mode==="local"?4800:mode==="cloud"?8000:AI_MAX_FILE_CHARS)});
+    contexts.push({path,value:contextualSource(file.value,instruction,mode==="local"?2800:mode==="cloud"?8000:AI_MAX_FILE_CHARS)});
    }
    progress.textContent="Generating exact replacements for "+selected.length+" file(s)…";
    let result;
