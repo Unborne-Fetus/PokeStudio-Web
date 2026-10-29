@@ -109,3 +109,29 @@ PokéStudio's three Pokémon editors use the same form-aware renderer. It tries 
 ### Totem Pokémon visibility
 
 Pokémon Studio and Pokédex Studio intentionally exclude Totem forms from their species browsers (by `TOTEM` species identifier or `.isTotem = TRUE`), including search results and counts. The ROM source and Totem definitions are not modified or deleted; other alternate forms and custom Megas remain selectable.
+
+## AI Project Editor (Level 2 — optional gateway)
+
+The **✦ AI Project Editor** tab proposes changes to files in the currently open Pokémon project using a separately deployed, authenticated AI gateway. This is **not** yet a public, unlimited AI service, and is not Level 3 (AI editing PokéStudio itself).
+
+**Safety and scope**
+
+- No generated change is applied without a separate review and explicit **Apply reviewed edits** click.
+- The full before/after source and exact replacements can be inspected. Changes stay local until separately exported or committed through PokéStudio's existing GitHub controls.
+- Multi-file AI changes are one undo/redo action; conflicting edits are rejected.
+- Only existing, small text files can be changed: maximum **4 files**, **14,000 source characters per file**, **32 unique literal replacement operations** per proposal. Binary files, scripts to execute, arbitrary file creation and automatic deployment are unsupported.
+- The chosen AI gateway receives the request and the selected files' text **only after consent**. Never place secrets in those files. The GitHub token is not sent to the AI gateway.
+- A worker access token is kept only in the current browser tab, like the existing GitHub token. It is not written to local storage or committed to the repository.
+
+**To configure an owner-operated private gateway** (Cloudflare Workers example):
+
+1. Configure a Cloudflare Workers deployment in the `worker/` directory. The sample `wrangler.toml` uses the GitHub Pages origin `https://unborne-fetus.github.io`; change `ALLOWED_ORIGIN` if deploying the editor elsewhere.
+2. Set the secret `OPENAI_API_KEY` using `npx wrangler secret put OPENAI_API_KEY`. Set a separate, long random secret `STUDIO_ACCESS_TOKEN` via `npx wrangler secret put STUDIO_ACCESS_TOKEN`.
+3. Run `npx wrangler deploy` from `worker/`. This requires your own Cloudflare account, API billing, and Node tooling for deployment only; users of PokéStudio still need no local installation.
+4. In PokéStudio's AI Project Editor tab, enter your worker URL and the separate **AI gateway access token**. Connect to a project, optionally list exact file paths, enter an edit request, consent to sharing selected file content, then generate and review a proposal.
+
+The gateway intentionally fails closed if authentication or the allowed origin has not been configured. **Do not publish the shared gateway token**, embed it in JavaScript, or distribute it to anonymous website visitors. A public multi-user service requires individual sign-in, per-user quotas, rate limiting, abuse monitoring, and secure credential handling before it can be opened to everyone.
+
+The AI cannot establish whether modified game code builds or runs correctly. Inspect the diff, run repository checks, and test the ROM before treating generated changes as complete. Models sometimes choose the wrong files or produce replacements that cannot be safely applied; the UI reports these failures rather than applying guesses.
+
+Level 3 (AI modifying PokéStudio Web itself through isolated branches, CI, and pull request reviews) is deliberately deferred until Level 2 has passed tests and hands-on usage.
