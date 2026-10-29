@@ -119,7 +119,7 @@ The **✦ AI Project Editor** tab proposes changes to files in the currently ope
 - No generated change is applied without a separate review and explicit **Apply reviewed edits** click.
 - The full before/after source and exact replacements can be inspected. Changes stay local until separately exported or committed through PokéStudio's existing GitHub controls.
 - Multi-file AI changes are one undo/redo action; conflicting edits are rejected.
-- Only existing, small text files can be changed: maximum **4 files**, **14,000 source characters per file**, **32 unique literal replacement operations** per proposal. Binary files, scripts to execute, arbitrary file creation and automatic deployment are unsupported.
+- Only existing text files can be changed: maximum **4 files** and **32 unique literal replacement operations** per proposal. For large ROM source files (up to 1.5 million characters), only a relevant 14,000-character excerpt is sent to the model, identified using the requested trainer/species/section name; the proposed replacements are verified against the **entire original file** before approval. Broad, multi-section edits may require smaller requests. Binary files, arbitrary file creation, command execution and automatic deployment are unsupported.
 - The chosen AI gateway receives the request and the selected files' text **only after consent**. Never place secrets in those files. The GitHub token is not sent to the AI gateway.
 - A worker access token is kept only in the current browser tab, like the existing GitHub token. It is not written to local storage or committed to the repository.
 
