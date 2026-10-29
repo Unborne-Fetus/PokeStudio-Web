@@ -98,6 +98,15 @@ export function prepareProposal(response,sourceFiles){
  return {summary:typeof response.summary==="string"?response.summary.slice(0,800):"Proposed source changes",changes,operations:response.edits.length};
 }
 
+export function assertUnchanged(proposal,lookup){
+ if(!proposal||!Array.isArray(proposal.changes))throw Error("No staged changes to validate.");
+ for(const change of proposal.changes){
+  const existing=lookup(change.path);
+  if(!existing||existing.isBinary||existing.value!==change.before)throw Error("Source changed since the AI proposal: "+change.path+". Regenerate the proposal before applying.");
+ }
+ return true;
+}
+
 export async function callGateway(endpoint,token,payload,fetcher=fetch){
  const url=validateEndpoint(endpoint);
  const controller=new AbortController();
