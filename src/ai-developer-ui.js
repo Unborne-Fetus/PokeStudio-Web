@@ -99,7 +99,10 @@ export function developerPage(api,root){
     const file=await instance.read(path);
     if(file.isBinary||typeof file.value!=="string")throw Error("Cannot edit binary website file.");
     sources.push({path,value:file.value});
-    context.push({path,value:contextualSource(file.value,prompt.value,2400)});
+    let excerpt;
+    try{excerpt=contextualSource(file.value,prompt.value,2400)}
+    catch{excerpt=file.value.slice(0,2400)} // New features may have no pre-existing keyword.
+    context.push({path,value:excerpt});
    }
    const answer=await callLocalAI({phase:"develop",instruction:prompt.value,files:context},{modelId:model.value,onProgress:text=>progress.textContent=text});
    staged={...prepareDeveloperProposal(answer,sources,known),operations:answer.edits};gh=instance;
