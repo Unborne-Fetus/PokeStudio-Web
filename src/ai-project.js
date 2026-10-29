@@ -5,10 +5,19 @@ export const AI_MAX_FILE_CHARS=14000;
 const AI_MAX_EDITS=32;
 
 const words=value=>String(value||"").toLowerCase().match(/[a-z0-9_]+/g)||[];
+export function editableAIPath(path){
+ if(typeof path!=="string"||!textPath(path)||path.length>300||path.includes("\\")||path.startsWith("/"))return false;
+ const segments=path.toLowerCase().split("/");
+ if(segments.some(p=>p==="."||p===".."||p===".git"||p===".github"||p==="node_modules"))return false;
+ const name=segments.at(-1);
+ if(name.startsWith(".env")||/^(?:package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$/i.test(name))return false;
+ if(/(?:secret|credential|private[_-]?key|api[_-]?key|auth[_-]?token)/i.test(name))return false;
+ return true;
+}
 
 export function candidatePaths(paths,instruction,currentPath=null,limit=240){
  const keys=new Set(words(instruction).filter(word=>word.length>2));
- return [...new Set(paths)].filter(path=>textPath(path)&&!path.startsWith(".git/"))
+ return [...new Set(paths)].filter(path=>editableAIPath(path))
   .map(path=>{
    const lower=path.toLowerCase(),parts=new Set(words(path));
    let score=path===currentPath?100:0;
@@ -38,7 +47,7 @@ export function prepareProposal(response,sourceFiles){
  if(!response.edits.length||response.edits.length>AI_MAX_EDITS)throw Error("AI returned an unsupported number of edits.");
  const originals=new Map();
  for(const file of sourceFiles){
-  if(!file||typeof file.path!=="string"||typeof file.value!=="string"||file.value.length>AI_MAX_FILE_CHARS)throw Error("Unsupported or oversized source file.");
+  if(!file||!editableAIPath(file.path)||typeof file.value!=="string"||file.value.length>AI_MAX_FILE_CHARS)throw Error("Unsupported or oversized source file.");
   if(originals.has(file.path))throw Error("Duplicate source path.");
   originals.set(file.path,file.value);
  }
