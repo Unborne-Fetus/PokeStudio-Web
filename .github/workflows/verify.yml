@@ -2,7 +2,7 @@ name: Verify PokéStudio changes
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feature/ai-project-editor-level2]
   workflow_dispatch:
 
 permissions:
