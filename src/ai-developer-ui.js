@@ -71,7 +71,7 @@ export function developerPage(api,root){
     if(selected.length>3||selected.some(p=>!known.includes(p)||!developerPath(p)))throw Error("Choose at most three existing, approved website source files.");
    }else{
     const common=["src/main.js","index.html","style.css"].filter(p=>known.includes(p));
-    const suggested=[...new Set([...candidatePaths(known,prompt.value,null,22),...common])].filter(developerPath);
+    const suggested=[...new Set([...candidatePaths(known,prompt.value,null,22),...common])].filter(path=>developerPath(path));
     progress.textContent="Selecting website source files…";
     const answer=await callLocalAI({phase:"select",instruction:prompt.value,paths:suggested,activePath:""},{modelId:model.value,onProgress:text=>progress.textContent=text});
     selected=selectFiles(answer,suggested).slice(0,3);
