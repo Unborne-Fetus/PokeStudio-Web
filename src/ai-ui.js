@@ -1,4 +1,4 @@
-import {AI_MAX_FILE_CHARS,AI_MAX_FILES,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "./ai-project.js";
+import {AI_MAX_FILE_CHARS,AI_MAX_FILES,editableAIPath,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "./ai-project.js";
 
 let gatewayUrl="";
 let gatewayAccess="";
@@ -94,7 +94,7 @@ export function aiPage(api,root){
    const known=api.paths().filter(path=>!path.startsWith(".git/"));
    let selected=pathInput.value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
    if(selected.length){
-    if(selected.length>AI_MAX_FILES||selected.some(path=>!known.includes(path)))throw Error("Enter up to four existing repository paths, each exactly as shown in Explorer.");
+    if(selected.length>AI_MAX_FILES||selected.some(path=>!known.includes(path)||!editableAIPath(path)))throw Error("Enter up to four supported, non-sensitive existing source paths as shown in Explorer.");
     selected=[...new Set(selected)];
    }else{
     const candidates=candidatePaths(known,instruction,api.current()?.path);
