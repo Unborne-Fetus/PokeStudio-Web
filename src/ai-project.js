@@ -2,6 +2,7 @@ import {textPath} from "./github.js";
 
 export const AI_MAX_FILES=4;
 export const AI_MAX_FILE_CHARS=14000;
+export const AI_MAX_PROJECT_FILE_CHARS=1500000;
 const AI_MAX_EDITS=32;
 
 const words=value=>String(value||"").toLowerCase().match(/[a-z0-9_]+/g)||[];
@@ -27,6 +28,28 @@ export function candidatePaths(paths,instruction,currentPath=null,limit=240){
   }).sort((a,b)=>b.score-a.score||a.path.localeCompare(b.path)).slice(0,limit).map(v=>v.path);
 }
 
+const COMMON=new Set(["make","change","edit","update","pokemon","pokémon","ability","level","levels","trainer","trainers","source","file","files","this","that","with","from","into","them","their","have","should","will","please","include","increase","decrease","every","would","like","want"]);
+export function contextualSource(value,instruction){
+ if(typeof value!=="string"||value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error("Source file is beyond the AI editor's size limit.");
+ if(value.length<=AI_MAX_FILE_CHARS)return value;
+ const terms=[...new Set(words(instruction).filter(key=>key.length>=4&&!COMMON.has(key)))];
+ if(!terms.length)throw Error("This file is large. Mention a specific trainer, species, ability, ID or source phrase to identify the section to edit.");
+ let bestScore=0,bestIndex=-1,offset=0;
+ for(const line of value.split("\n")){
+  const lower=line.toLowerCase();
+  let score=0;
+  for(const term of terms)if(lower.includes(term))score+=term.length>=8?5:3;
+  if(score>0&&/^(?:===|\s*\[|\s*#define|\s*\.)/.test(line))score+=2;
+  if(score>bestScore){bestScore=score;bestIndex=offset+Math.floor(line.length/2)}
+  offset+=line.length+1;
+ }
+ if(bestScore<3||bestIndex<0)throw Error("Could not identify the requested section in this large file. Supply its exact name or identifier.");
+ const size=AI_MAX_FILE_CHARS;
+ let start=Math.max(0,bestIndex-Math.floor(size/2)),end=Math.min(value.length,start+size);
+ start=Math.max(0,end-size);
+ return value.slice(start,end);
+}
+
 export function selectFiles(response,offered){
  if(!response||!Array.isArray(response.files))throw Error("AI did not return a list of files.");
  const allowed=new Set(offered),paths=[...new Set(response.files)];
@@ -47,7 +70,7 @@ export function prepareProposal(response,sourceFiles){
  if(!response.edits.length||response.edits.length>AI_MAX_EDITS)throw Error("AI returned an unsupported number of edits.");
  const originals=new Map();
  for(const file of sourceFiles){
-  if(!file||!editableAIPath(file.path)||typeof file.value!=="string"||file.value.length>AI_MAX_FILE_CHARS)throw Error("Unsupported or oversized source file.");
+  if(!file||!editableAIPath(file.path)||typeof file.value!=="string"||file.value.length>AI_MAX_PROJECT_FILE_CHARS)throw Error("Unsupported or oversized source file.");
   if(originals.has(file.path))throw Error("Duplicate source path.");
   originals.set(file.path,file.value);
  }
@@ -61,7 +84,7 @@ export function prepareProposal(response,sourceFiles){
   if(index<0)throw Error("AI search text was not found in "+edit.path+". No changes were applied.");
   if(value.indexOf(edit.find,index+edit.find.length)!==-1)throw Error("AI edit is ambiguous in "+edit.path+"; matching text occurs multiple times.");
   const updated=value.slice(0,index)+edit.replace+value.slice(index+edit.find.length);
-  if(updated.length>AI_MAX_FILE_CHARS*2)throw Error("Proposed file is too large.");
+  if(updated.length>AI_MAX_PROJECT_FILE_CHARS+12000)throw Error("Proposed file is too large.");
   modified.set(edit.path,updated);
  }
  const changes=[];
