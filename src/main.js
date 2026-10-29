@@ -2,6 +2,7 @@ import {GitHubWorkspace,textPath,binaryPath} from "./github.js";
 import {renderVisual} from "./editors.js";
 import {createZip} from "./zip.js";
 import {EditHistory} from "./history.js";
+import {aiPage} from "./ai-ui.js";
 import {mapStudio} from "./maps.js";
 import {trainerPage} from "./trainers.js?rev=webemu-forms-5";
 import {pokemonPage} from "./pokemon.js?rev=hide-totems-7";
@@ -94,23 +95,34 @@ function changeBytesFor(path,bytes){
  if(!history.record(path,rec.bytes,bytes))return;
  rec.bytes=bytes.slice();changedFile(path)
 }
+function applyBatch(changes){
+ if(!Array.isArray(changes)||!changes.length)throw Error("Nothing to apply.");
+ for(const change of changes){const rec=files.get(change.path);if(!rec||rec.isBinary||rec.value!==change.before)throw Error("The source changed: "+change.path)}
+ history.recordBatch(changes);
+ for(const change of changes){files.get(change.path).value=change.after;if(currentPath===change.path&&view==="code")setEditorValue(change.after);changedFile(change.path)}
+}
 function applyHistory(direction){
  const item=direction==="undo"?history.undo():history.redo();
  if(!item)return;
- const rec=files.get(item.path);
- if(!rec){info("History references an unloaded file.","error");return}
- if(rec.isBinary)rec.bytes=item.value.slice();else rec.value=item.value;
- if(currentPath===item.path&&view==="code")setEditorValue(rec.isBinary?"Binary file":rec.value);
- changedFile(item.path);renderView();
- info((direction==="undo"?"Undid":"Redid")+" edit to "+item.path,"success")
+ const updates=item.batch||[item];
+ for(const update of updates){
+  const rec=files.get(update.path);
+  if(!rec){info("History references an unloaded file.","error");return}
+  if(rec.isBinary)rec.bytes=update.value.slice();else rec.value=update.value;
+  if(currentPath===update.path&&view==="code")setEditorValue(rec.isBinary?"Binary file":rec.value);
+  changedFile(update.path);
+ }
+ renderView();
+ info((direction==="undo"?"Undid":"Redid")+" "+(updates.length===1?"edit to "+updates[0].path:updates.length+"-file edit batch"),"success")
 }
 function setView(next){if(!supportsView(project,next)){info("This editor is unavailable for "+project.name+". Choose an available tab.","error");return}view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
 function renderView(){
  $("codepane").hidden=view!=="code";
- $("visual").hidden=!["map","trainers","pokemon","pokedex","encounters","data","sprites"].includes(view);
+ $("visual").hidden=!["map","trainers","pokemon","pokedex","encounters","data","sprites","ai"].includes(view);
  $("changes").hidden=view!=="changes";
  if(view==="changes")renderChanges();
- if(view==="map")mapStudio(visualApi,$("visual"),current()).catch(e=>info("Map Studio error: "+e.message,"error"));
+ if(view==="ai")aiPage({...visualApi,getFile:path=>files.get(path),applyBatch},$("visual"));
+ else if(view==="map")mapStudio(visualApi,$("visual"),current()).catch(e=>info("Map Studio error: "+e.message,"error"));
  else if(view==="trainers")trainerPage(visualApi,$("visual")).catch(e=>info("Trainer Studio error: "+e.message,"error"));
   else if(view==="pokemon")pokemonPage(visualApi,$("visual")).catch(e=>info("Pokémon Studio error: "+e.message,"error"));
  else if(view==="pokedex")pokedexPage(visualApi,$("visual")).catch(e=>info("Pokédex Studio error: "+e.message,"error"));
