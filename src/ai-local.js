@@ -6,6 +6,8 @@ const WEBLLM_CDN="https://esm.run/@mlc-ai/web-llm@0.2.86";
 export const LOCAL_MODELS=[
  {id:"Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC",label:"Coder 0.5B · lower memory (~1 GB GPU)"},
  {id:"Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC",label:"Coder 1.5B · balanced (~1.6 GB GPU)"},
+ {id:"Qwen2.5-Coder-0.5B-Instruct-q4f32_1-MLC",label:"Coder 0.5B · compatibility mode (~1.1 GB GPU)"},
+ {id:"Qwen2.5-Coder-1.5B-Instruct-q4f32_1-MLC",label:"Coder 1.5B · compatibility mode (~1.9 GB GPU)"},
  {id:"Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC",label:"Coder 3B · better edits (~2.5 GB GPU)"}
 ];
 let enginePromise=null,loadedModel="";
@@ -39,6 +41,6 @@ export async function getLocalEngine(modelId,report=()=>{},imports=url=>import(u
 export async function callLocalAI(payload,{modelId=LOCAL_MODELS[1].id,onProgress=()=>{},getEngine=getLocalEngine}={}){
  const engine=await getEngine(modelId,onProgress);
  onProgress("Generating "+(payload.phase==="select"?"file selection":payload.phase==="develop"?"PokéStudio feature proposal":"source edits")+" locally…");
- const result=await engine.chat.completions.create({messages:prompts(payload),temperature:0,max_tokens:payload.phase==="develop"?3000:2200,response_format:{type:"json_object"}});
+ const result=await engine.chat.completions.create({messages:prompts(payload),temperature:0,max_tokens:payload.phase==="select"?350:payload.phase==="develop"?1800:1600,response_format:{type:"json_object"}});
  return parseAIJSON(result?.choices?.[0]?.message?.content);
 }
