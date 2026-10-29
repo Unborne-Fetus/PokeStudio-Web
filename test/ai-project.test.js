@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "../src/ai-project.js";
+import {editableAIPath,candidatePaths,selectFiles,prepareProposal,validateEndpoint,callGateway} from "../src/ai-project.js";
 import {EditHistory} from "../src/history.js";
 import worker from "../worker/ai-worker.js";
 
@@ -64,4 +64,11 @@ test("worker rejects other origins and missing access tokens without calling a m
  assert.equal((await worker.fetch(offsite,env)).status,403);
  const publicRequest=new Request("https://worker.example.com",{method:"POST",headers:{"Origin":env.ALLOWED_ORIGIN}});
  assert.equal((await worker.fetch(publicRequest,env)).status,401);
+});
+
+test("AI refuses GitHub Actions, credential and package execution configuration paths",()=>{
+ for(const path of [".github/workflows/build.yml",".env.local","src/credentials.json","package.json","tools/private_key.py","graphics/sprite.png","a/../b.json"])
+  assert.equal(editableAIPath(path),false,path);
+ assert.equal(editableAIPath("src/data/wild_encounters.json"),true);
+ assert.throws(()=>prepareProposal({edits:[{path:".github/workflows/build.yml",find:"x",replace:"y"}]},[{path:".github/workflows/build.yml",value:"x"}]),/Unsupported/);
 });
