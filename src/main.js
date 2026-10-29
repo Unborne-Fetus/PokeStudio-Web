@@ -3,6 +3,7 @@ import {renderVisual} from "./editors.js";
 import {createZip} from "./zip.js";
 import {EditHistory} from "./history.js";
 import {aiPage} from "./ai-ui.js";
+import {developerPage} from "./ai-developer-ui.js";
 import {mapStudio} from "./maps.js";
 import {trainerPage} from "./trainers.js?rev=webemu-forms-5";
 import {pokemonPage} from "./pokemon.js?rev=hide-totems-7";
@@ -118,10 +119,11 @@ function applyHistory(direction){
 function setView(next){if(!supportsView(project,next)){info("This editor is unavailable for "+project.name+". Choose an available tab.","error");return}view=next;document.querySelectorAll("#tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));renderView()}
 function renderView(){
  $("codepane").hidden=view!=="code";
- $("visual").hidden=!["map","trainers","pokemon","pokedex","encounters","data","sprites","ai"].includes(view);
+ $("visual").hidden=!["map","trainers","pokemon","pokedex","encounters","data","sprites","ai","developer"].includes(view);
  $("changes").hidden=view!=="changes";
  if(view==="changes")renderChanges();
  if(view==="ai")aiPage({...visualApi,getFile:path=>files.get(path),applyBatch},$("visual"));
+ else if(view==="developer")developerPage({...visualApi,getToken:()=>repo.token},$("visual"));
  else if(view==="map")mapStudio(visualApi,$("visual"),current()).catch(e=>info("Map Studio error: "+e.message,"error"));
  else if(view==="trainers")trainerPage(visualApi,$("visual")).catch(e=>info("Trainer Studio error: "+e.message,"error"));
   else if(view==="pokemon")pokemonPage(visualApi,$("visual")).catch(e=>info("Pokémon Studio error: "+e.message,"error"));

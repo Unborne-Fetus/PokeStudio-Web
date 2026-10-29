@@ -18,14 +18,14 @@ const searing=[
 test("Emerald source repositories keep their complete visual editors",()=>{
  const profile=detectProject(brisk);
  assert.equal(profile.id,"emerald");
- for(const view of ["code","ai","map","trainers","pokemon","pokedex","encounters","data","sprites","changes"])
+ for(const view of ["code","ai","developer","map","trainers","pokemon","pokedex","encounters","data","sprites","changes"])
   assert.equal(supportsView(profile,view),true);
  assert.ok(profile.canPlayWebEmu);
 });
 test("Searing Sun patch projects open the genuine Gen 7 encounter editor",()=>{
  const profile=detectProject(searing);
  assert.equal(profile.id,"searing");
- for(const view of ["code","ai","encounters","data","changes"])
+ for(const view of ["code","ai","developer","encounters","data","changes"])
   assert.equal(supportsView(profile,view),true);
  for(const view of ["map","pokemon","pokedex","trainers","sprites"])
   assert.equal(supportsView(profile,view),false);
@@ -34,7 +34,7 @@ test("Searing Sun patch projects open the genuine Gen 7 encounter editor",()=>{
 });
 test("Unknown projects still support general GitHub source edits and commits",()=>{
  assert.equal(detectProject(["README.md","config/settings.json"]).id,"generic");
- assert.deepEqual(detectProject([]).views,["code","ai","data","changes"]);
+ assert.deepEqual(detectProject([]).views,["code","ai","developer","data","changes"]);
  assert.equal(detectProject(new Set(searing)).id,"searing");
 });
 test("Known project presets use real repositories; custom names are accepted",()=>{

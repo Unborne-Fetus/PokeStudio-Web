@@ -152,3 +152,17 @@ Deployment (owner only):
 Cloud fallback is **opt-in**, not automatic: users consent before sending selected file excerpts to the Worker. Local inference has a lower source context window, so narrower project requests will perform better. The small local and cloud models cannot reliably implement large cross-file game mechanics without human review and gameplay/build testing.
 
 **Security note:** The Workers Rate Limiting binding is approximate and per location; it does not create a strict global daily spending cap. The fallback is intended for an account held on the no-overage Workers Free tier. For rigorous financial protection when upgrading Workers, add an account-level spending cap or strict global metering before enabling public access.
+
+## AI Developer — Level 3 prototype (not yet production-ready)
+
+The new **✧ AI Developer** tab generates *small proposals to modify PokéStudio Web itself*, independently from Level 2's Pokémon project editing. It reads public PokéStudio code from the repository's `main` branch, uses the local WebGPU model (no AI API key), and produces reviewable source replacements and up to two new `src/` or `test/` modules. Visitors can export the changed files as a ZIP without any GitHub credentials.
+
+**Publishing requires an authorized maintainer's fine-grained token** with access to `Unborne-Fetus/PokeStudio-Web` (Contents: read/write and Pull requests: read/write). A separate, explicit approval click:
+1. Checks whether the `main` branch has moved since the proposal was generated; aborts if it has.
+2. Creates a uniquely named `ai-feature/<id>` branch based on the inspected commit, then commits the proposed files **to that branch only**.
+3. Opens a **draft** pull request targeting `main`; repository CI can run on the PR. No auto-merge, unattended execution, or production deployment occurs.
+4. Human maintainers must review each source diff, any applicable security impact, and the CI checks before deciding whether to merge.
+
+The AI cannot edit workflow files, dependency manifests, AI gateway code, authentication code, or other blocked paths. It cannot create an arbitrary file outside approved `src/` and `test/` directories. Requests larger than the small model's context window often need to be split or handled manually. Test automation and review are safeguards, not a guarantee that AI-generated features work.
+
+**Release gate:** This prototype is intentionally on `feature/ai-developer-level3` and in a stacked draft PR. It must not be merged or enabled on the public site until Level 2 free/browser inference has been manually smoke-tested on real hardware, the optional cloud worker has been configured and validated, and end-to-end branch/PR creation has been tested with an authorized maintainer token. The main site remains unchanged until human approval.
