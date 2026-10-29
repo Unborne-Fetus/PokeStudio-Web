@@ -99,7 +99,7 @@ function applyBatch(changes){
  if(!Array.isArray(changes)||!changes.length)throw Error("Nothing to apply.");
  for(const change of changes){const rec=files.get(change.path);if(!rec||rec.isBinary||rec.value!==change.before)throw Error("The source changed: "+change.path)}
  history.recordBatch(changes);
- for(const change of changes){files.get(change.path).value=change.after;if(currentPath===change.path&&view==="code")setEditorValue(change.after);changedFile(change.path)}
+ for(const change of changes){files.get(change.path).value=change.after;if(currentPath===change.path)setEditorValue(change.after);changedFile(change.path)}
 }
 function applyHistory(direction){
  const item=direction==="undo"?history.undo():history.redo();
@@ -109,7 +109,7 @@ function applyHistory(direction){
   const rec=files.get(update.path);
   if(!rec){info("History references an unloaded file.","error");return}
   if(rec.isBinary)rec.bytes=update.value.slice();else rec.value=update.value;
-  if(currentPath===update.path&&view==="code")setEditorValue(rec.isBinary?"Binary file":rec.value);
+  if(currentPath===update.path)setEditorValue(rec.isBinary?"Binary file":rec.value);
   changedFile(update.path);
  }
  renderView();
